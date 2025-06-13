@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -63,6 +64,11 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
+			fontFamily: {
+				'playfair': ['Playfair Display', 'serif'],
+				'cinzel': ['Cinzel', 'serif'],
+				'inter': ['Inter', 'sans-serif'],
+			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
@@ -84,11 +90,38 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'gradient': {
+					'0%, 100%': {
+						'background-position': '0% 50%'
+					},
+					'50%': {
+						'background-position': '100% 50%'
+					}
+				},
+				'float': {
+					'0%, 100%': { transform: 'translateY(0px)' },
+					'50%': { transform: 'translateY(-10px)' }
+				},
+				'glow': {
+					'0%, 100%': { boxShadow: '0 0 20px rgba(6, 182, 212, 0.3)' },
+					'50%': { boxShadow: '0 0 40px rgba(6, 182, 212, 0.6)' }
+				},
+				'particle': {
+					'0%': { transform: 'rotate(0deg) translateX(20px) rotate(0deg)' },
+					'100%': { transform: 'rotate(360deg) translateX(20px) rotate(-360deg)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'gradient': 'gradient 6s ease infinite',
+				'float': 'float 3s ease-in-out infinite',
+				'glow': 'glow 2s ease-in-out infinite alternate',
+				'particle': 'particle 4s linear infinite'
+			},
+			backgroundSize: {
+				'400%': '400% 400%'
 			}
 		}
 	},
