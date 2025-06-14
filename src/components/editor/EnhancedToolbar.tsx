@@ -318,11 +318,15 @@ const EnhancedToolbar: React.FC = () => {
                   <Input
                     value={mathExpression}
                     onChange={(e) => setMathExpression(e.target.value)}
-                    placeholder="Enter math expression (e.g., x^2 + y^2 = z^2)"
+                    placeholder="Enter LaTeX expression (e.g., x^2 + y^2 = z^2)"
                     className="bg-slate-700 border-slate-600 text-slate-200"
                   />
-                  <div className="text-xs text-slate-400">
-                    Examples: x^2, a/b, sqrt(x), sum from i=1 to n of x_i
+                  <div className="text-xs text-slate-400 space-y-1">
+                    <div><strong>Examples:</strong></div>
+                    <div>• Quadratic formula: x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}</div>
+                    <div>• Integral: \int_0^1 x^2 dx</div>
+                    <div>• Summation: \sum_{i=1}^n x_i</div>
+                    <div>• Matrix: \begin{pmatrix} a & b \\ c & d \end{pmatrix}</div>
                   </div>
                   <Button onClick={insertMathEquation} className="bg-cyan-600 hover:bg-cyan-700">
                     Insert Equation

@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -23,6 +22,7 @@ import { useEditorStore } from '@/stores/editorStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { ResizableImage } from './extensions/ResizableImage';
 import { Mathematics } from './extensions/Mathematics';
+import 'katex/dist/katex.min.css';
 
 const lowlight = createLowlight(common);
 
@@ -134,7 +134,8 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
               [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-gray-300 [&_.ProseMirror_td]:p-2
               [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-gray-300 [&_.ProseMirror_th]:p-2 [&_.ProseMirror_th]:bg-gray-100
               [&_.task-list]:list-none [&_.task-item]:flex [&_.task-item]:items-start
-              [&_.math-expression]:bg-gray-50 [&_.math-expression]:p-2 [&_.math-expression]:rounded [&_.math-expression]:my-2
+              [&_.math-expression]:bg-gray-50 [&_.math-expression]:p-4 [&_.math-expression]:rounded [&_.math-expression]:my-4 [&_.math-expression]:border
+              [&_.katex-display]:margin-0
               [&_.resizable-image-wrapper]:relative [&_.resizable-image-wrapper]:inline-block
               [&_.resize-handles]:absolute [&_.resize-handles]:inset-0 [&_.resize-handles]:pointer-events-none
               [&_.resize-handle]:absolute [&_.resize-handle]:w-2 [&_.resize-handle]:h-2 [&_.resize-handle]:bg-blue-500 [&_.resize-handle]:pointer-events-auto

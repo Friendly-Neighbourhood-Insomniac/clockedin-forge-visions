@@ -1,5 +1,6 @@
 
 import { Node } from '@tiptap/core';
+import katex from 'katex';
 
 export interface MathematicsOptions {
   HTMLAttributes: Record<string, any>;
@@ -46,15 +47,31 @@ export const Mathematics = Node.create<MathematicsOptions>({
   },
 
   renderHTML({ HTMLAttributes }) {
+    const expression = HTMLAttributes.expression || '';
+    let renderedMath = '';
+    
+    try {
+      // Render the LaTeX expression using KaTeX
+      renderedMath = katex.renderToString(expression, {
+        displayMode: true,
+        throwOnError: false,
+        errorColor: '#cc0000',
+        strict: 'warn'
+      });
+    } catch (error) {
+      console.error('KaTeX rendering error:', error);
+      renderedMath = `<span style="color: #cc0000;">Error: ${expression}</span>`;
+    }
+
     return [
       'div',
       {
         'data-math': true,
-        'data-expression': HTMLAttributes.expression,
-        class: 'math-expression bg-gray-50 p-2 rounded border font-mono text-center',
+        'data-expression': expression,
+        class: 'math-expression bg-gray-50 p-4 rounded border text-center my-4',
         ...this.options.HTMLAttributes,
       },
-      HTMLAttributes.expression,
+      ['div', { innerHTML: renderedMath }]
     ];
   },
 
