@@ -1,0 +1,59 @@
+
+.flipbook-container {
+  margin: 0 auto;
+  position: relative;
+}
+
+.flipbook-container .page {
+  width: 100%;
+  height: 100%;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.flipbook-container .hard {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: white;
+}
+
+.flipbook-container .page img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Turn.js specific styles */
+.turn-page {
+  background-color: #fff;
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+
+.turn-page-wrapper {
+  perspective: 2000px;
+}
+
+/* Enhanced page shadows and gradients */
+.flipbook-container .turn-page {
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0.15) 0%,
+    rgba(0,0,0,0.05) 10%,
+    rgba(0,0,0,0) 18%,
+    rgba(0,0,0,0) 82%,
+    rgba(0,0,0,0.05) 90%,
+    rgba(0,0,0,0.15) 100%
+  );
+}
+
+.flipbook-container .turn-page.turn-page-left {
+  box-shadow: 
+    inset 0 0 30px rgba(0,0,0,0.1),
+    inset -5px 0 10px rgba(0,0,0,0.1);
+}
+
+.flipbook-container .turn-page.turn-page-right {
+  box-shadow: 
+    inset 0 0 30px rgba(0,0,0,0.1),
+    inset 5px 0 10px rgba(0,0,0,0.1);
+}
