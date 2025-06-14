@@ -38,6 +38,7 @@ const BookEditor = () => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [selectedChapter, setSelectedChapter] = useState<string>('');
   const [isFlipbookOpen, setIsFlipbookOpen] = useState(false);
+  const [mediaEditor, setMediaEditor] = useState<{ element: HTMLElement; position: { x: number; y: number } } | null>(null);
   const [bookData, setBookData] = useState<BookData>({
     title: '',
     author: '',
@@ -130,18 +131,51 @@ const BookEditor = () => {
     formatText('foreColor', color);
   };
 
-  const handleImageInsert = (imageUrl: string) => {
-    const img = `<img src="${imageUrl}" alt="Inserted image" style="max-width: 100%; height: auto; margin: 10px 0;" />`;
+  const handleImageInsert = (imageUrl: string, metadata?: { width?: string; height?: string; alt?: string }) => {
+    const img = `<img 
+      src="${imageUrl}" 
+      alt="${metadata?.alt || 'Inserted image'}" 
+      style="
+        max-width: 100%; 
+        height: auto; 
+        margin: 10px; 
+        cursor: pointer; 
+        border: 2px solid transparent;
+        transition: border-color 0.2s;
+        ${metadata?.width ? `width: ${metadata.width};` : ''}
+        ${metadata?.height ? `height: ${metadata.height};` : ''}
+      " 
+      class="editable-media"
+      onclick="this.style.border = this.style.border === '2px solid rgb(6, 182, 212)' ? '2px solid transparent' : '2px solid rgb(6, 182, 212)'"
+    />`;
+    
     document.execCommand('insertHTML', false, img);
     if (editorRef.current) {
       const content = editorRef.current.innerHTML;
       updateChapter(selectedChapter, 'content', content);
+      
+      // Add click listeners to newly inserted images
+      setTimeout(() => setupMediaClickListeners(), 100);
     }
   };
 
   const handleEmbedInsert = (embedData: { url: string; title: string; type: 'video' | 'website' }) => {
     const embedHtml = `
-      <div class="embed-container" data-url="${embedData.url}" data-title="${embedData.title}" data-type="${embedData.type}" style="margin: 20px 0; padding: 15px; border: 2px solid #e2e8f0; border-radius: 8px; background: #f8fafc;">
+      <div class="embed-container editable-media" 
+           data-url="${embedData.url}" 
+           data-title="${embedData.title}" 
+           data-type="${embedData.type}" 
+           style="
+             margin: 20px 0; 
+             padding: 15px; 
+             border: 2px solid #e2e8f0; 
+             border-radius: 8px; 
+             background: #f8fafc;
+             cursor: pointer;
+             transition: border-color 0.2s;
+           "
+           onclick="this.style.border = this.style.border === '2px solid rgb(6, 182, 212)' ? '2px solid #e2e8f0' : '2px solid rgb(6, 182, 212)'"
+      >
         <h4 style="margin-bottom: 10px; color: #334155;">${embedData.title}</h4>
         <iframe src="${embedData.url}" width="100%" height="315" frameborder="0" allowfullscreen style="border-radius: 4px;"></iframe>
         <p style="font-size: 12px; color: #64748b; margin-top: 8px;">🔗 ${embedData.type === 'video' ? 'Video' : 'Website'} Embed</p>
@@ -152,8 +186,48 @@ const BookEditor = () => {
     if (editorRef.current) {
       const content = editorRef.current.innerHTML;
       updateChapter(selectedChapter, 'content', content);
+      
+      // Add click listeners to newly inserted embeds
+      setTimeout(() => setupMediaClickListeners(), 100);
     }
   };
+
+  const setupMediaClickListeners = () => {
+    if (!editorRef.current) return;
+    
+    const mediaElements = editorRef.current.querySelectorAll('.editable-media');
+    mediaElements.forEach((element) => {
+      element.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const rect = element.getBoundingClientRect();
+        const editorRect = editorRef.current!.getBoundingClientRect();
+        
+        setMediaEditor({
+          element: element as HTMLElement,
+          position: {
+            x: rect.right - editorRect.left + 10,
+            y: rect.top - editorRect.top
+          }
+        });
+      });
+    });
+  };
+
+  const handleMediaUpdate = (element: HTMLElement) => {
+    if (editorRef.current) {
+      const content = editorRef.current.innerHTML;
+      updateChapter(selectedChapter, 'content', content);
+    }
+  };
+
+  // Setup media click listeners when chapter content changes
+  useEffect(() => {
+    if (currentChapter) {
+      setTimeout(() => setupMediaClickListeners(), 100);
+    }
+  }, [selectedChapter, currentChapter?.content]);
 
   const handleMetadataChange = (field: string, value: string) => {
     if (field === 'title' || field === 'author' || field === 'description') {
@@ -421,7 +495,7 @@ const BookEditor = () => {
               </div>
 
               {/* Editor */}
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-3 relative">
                 <Card className="bg-slate-800/50 border-cyan-400/30">
                   <CardHeader>
                     <Input
@@ -442,7 +516,7 @@ const BookEditor = () => {
                     onColorChange={handleColorChange}
                   />
                   
-                  <CardContent>
+                  <CardContent className="relative">
                     <div
                       ref={editorRef}
                       contentEditable
@@ -460,6 +534,25 @@ const BookEditor = () => {
                       <div className="text-center text-slate-400 py-20">
                         <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
                         <p>Select a chapter to start writing</p>
+                        <p className="text-sm mt-2">Double-click images and embeds to edit them</p>
+                      </div>
+                    )}
+                    
+                    {/* Media Editor */}
+                    {mediaEditor && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: mediaEditor.position.x,
+                          top: mediaEditor.position.y,
+                          zIndex: 1000
+                        }}
+                      >
+                        <MediaEditor
+                          element={mediaEditor.element}
+                          onClose={() => setMediaEditor(null)}
+                          onUpdate={handleMediaUpdate}
+                        />
                       </div>
                     )}
                   </CardContent>

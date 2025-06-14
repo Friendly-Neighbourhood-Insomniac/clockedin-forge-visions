@@ -17,12 +17,12 @@ import {
   Type,
   Palette
 } from 'lucide-react';
-import ImageUpload from './ImageUpload';
+import EnhancedImageUpload from './EnhancedImageUpload';
 import EmbedInsert from './EmbedInsert';
 
 interface AdvancedToolbarProps {
   onFormat: (command: string, value?: string) => void;
-  onImageInsert: (imageUrl: string) => void;
+  onImageInsert: (imageUrl: string, metadata?: { width?: string; height?: string; alt?: string }) => void;
   onEmbedInsert: (embedData: { url: string; title: string; type: 'video' | 'website' }) => void;
   onFontChange: (font: string) => void;
   onFontSizeChange: (size: string) => void;
@@ -184,7 +184,7 @@ const AdvancedToolbar: React.FC<AdvancedToolbarProps> = ({
         <Separator orientation="vertical" className="h-6 bg-slate-600" />
 
         {/* Media */}
-        <ImageUpload onImageInsert={onImageInsert} />
+        <EnhancedImageUpload onImageInsert={onImageInsert} />
         <EmbedInsert onEmbedInsert={onEmbedInsert} />
 
         <Button
