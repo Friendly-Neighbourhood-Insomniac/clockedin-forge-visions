@@ -1,4 +1,3 @@
-
 import React, { useCallback, useRef, useEffect } from 'react';
 import { Editor, EditorState, RichUtils, getDefaultKeyBinding, KeyBindingUtil } from 'draft-js';
 import { useEditorStore } from '@/stores/editorStore';
@@ -28,40 +27,54 @@ const DraftailEditor: React.FC<DraftailEditorProps> = ({
 
   const blockRendererFn = useCallback((block: any) => {
     if (block.getType() === 'atomic') {
-      const entity = editorState.getCurrentContent().getEntity(block.getEntityAt(0));
-      const entityType = entity.getType();
-      
-      if (entityType === 'IMAGE') {
-        return {
-          component: ImageEntity,
-          editable: false,
-          props: {
-            onEntityDataChange: handleEntityDataChange,
-            onEntityRemove: handleEntityRemove,
-          },
-        };
+      const entityKey = block.getEntityAt(0);
+      if (!entityKey) {
+        return null;
       }
       
-      if (entityType === 'VIDEO') {
-        return {
-          component: VideoEntity,
-          editable: false,
-          props: {
-            onEntityDataChange: handleEntityDataChange,
-            onEntityRemove: handleEntityRemove,
-          },
-        };
-      }
-      
-      if (entityType === 'EMBED') {
-        return {
-          component: EmbedEntity,
-          editable: false,
-          props: {
-            onEntityDataChange: handleEntityDataChange,
-            onEntityRemove: handleEntityRemove,
-          },
-        };
+      try {
+        const entity = editorState.getCurrentContent().getEntity(entityKey);
+        if (!entity) {
+          return null;
+        }
+        
+        const entityType = entity.getType();
+        
+        if (entityType === 'IMAGE') {
+          return {
+            component: ImageEntity,
+            editable: false,
+            props: {
+              onEntityDataChange: handleEntityDataChange,
+              onEntityRemove: handleEntityRemove,
+            },
+          };
+        }
+        
+        if (entityType === 'VIDEO') {
+          return {
+            component: VideoEntity,
+            editable: false,
+            props: {
+              onEntityDataChange: handleEntityDataChange,
+              onEntityRemove: handleEntityRemove,
+            },
+          };
+        }
+        
+        if (entityType === 'EMBED') {
+          return {
+            component: EmbedEntity,
+            editable: false,
+            props: {
+              onEntityDataChange: handleEntityDataChange,
+              onEntityRemove: handleEntityRemove,
+            },
+          };
+        }
+      } catch (error) {
+        console.error('Error rendering entity:', error);
+        return null;
       }
     }
     
@@ -69,34 +82,47 @@ const DraftailEditor: React.FC<DraftailEditorProps> = ({
   }, [editorState]);
 
   const handleEntityDataChange = useCallback((entityKey: string, newData: any) => {
-    const currentContent = editorState.getCurrentContent();
-    const entity = currentContent.getEntity(entityKey);
-    const mergedData = { ...entity.getData(), ...newData };
-    
-    const newContentState = currentContent.mergeEntityData(entityKey, mergedData);
-    const newEditorState = EditorState.push(editorState, newContentState, 'apply-entity');
-    setEditorState(newEditorState);
+    try {
+      const currentContent = editorState.getCurrentContent();
+      const entity = currentContent.getEntity(entityKey);
+      if (!entity) {
+        console.warn('Entity not found:', entityKey);
+        return;
+      }
+      
+      const mergedData = { ...entity.getData(), ...newData };
+      
+      const newContentState = currentContent.mergeEntityData(entityKey, mergedData);
+      const newEditorState = EditorState.push(editorState, newContentState, 'apply-entity');
+      setEditorState(newEditorState);
+    } catch (error) {
+      console.error('Error updating entity data:', error);
+    }
   }, [editorState, setEditorState]);
 
   const handleEntityRemove = useCallback((entityKey: string) => {
-    // Find and remove the block containing this entity
-    const currentContent = editorState.getCurrentContent();
-    const blockMap = currentContent.getBlockMap();
-    
-    const filteredBlocks = blockMap.filter(block => {
-      if (block && block.getType() === 'atomic') {
-        const blockEntityKey = block.getEntityAt(0);
-        return blockEntityKey !== entityKey;
-      }
-      return true;
-    });
-    
-    const newContentState = currentContent.merge({
-      blockMap: filteredBlocks,
-    });
-    
-    const newEditorState = EditorState.push(editorState, newContentState, 'remove-range');
-    setEditorState(newEditorState);
+    try {
+      // Find and remove the block containing this entity
+      const currentContent = editorState.getCurrentContent();
+      const blockMap = currentContent.getBlockMap();
+      
+      const filteredBlocks = blockMap.filter(block => {
+        if (block && block.getType() === 'atomic') {
+          const blockEntityKey = block.getEntityAt(0);
+          return blockEntityKey !== entityKey;
+        }
+        return true;
+      });
+      
+      const newContentState = currentContent.merge({
+        blockMap: filteredBlocks,
+      });
+      
+      const newEditorState = EditorState.push(editorState, newContentState, 'remove-range');
+      setEditorState(newEditorState);
+    } catch (error) {
+      console.error('Error removing entity:', error);
+    }
   }, [editorState, setEditorState]);
 
   const handleKeyCommand = useCallback((command: string, editorState: EditorState) => {
