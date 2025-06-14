@@ -1,22 +1,50 @@
+
 import QRCode from 'react-qr-code';
-import { renderToString } from 'react-dom/server';
 import React from 'react';
 
 export const generateQRCodeUrl = async (text: string): Promise<string> => {
   try {
-    // Create QR code component
+    // Create a temporary div to render the QR code
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.top = '-9999px';
+    container.style.left = '-9999px';
+    document.body.appendChild(container);
+
+    // Create QR code element
     const qrCodeElement = React.createElement(QRCode, {
       value: text,
       size: 150,
       level: 'M',
     });
+
+    // Use ReactDOM to render to the container
+    const { createRoot } = await import('react-dom/client');
+    const root = createRoot(container);
     
-    // Convert to SVG string
-    const svgString = renderToString(qrCodeElement);
-    
-    // Convert SVG to data URL
-    const dataUrl = `data:image/svg+xml;base64,${btoa(svgString)}`;
-    return dataUrl;
+    return new Promise((resolve) => {
+      root.render(qrCodeElement);
+      
+      // Wait for render to complete
+      setTimeout(() => {
+        const svgElement = container.querySelector('svg');
+        if (svgElement) {
+          const svgString = new XMLSerializer().serializeToString(svgElement);
+          const dataUrl = `data:image/svg+xml;base64,${btoa(svgString)}`;
+          
+          // Cleanup
+          root.unmount();
+          document.body.removeChild(container);
+          
+          resolve(dataUrl);
+        } else {
+          // Cleanup on failure
+          root.unmount();
+          document.body.removeChild(container);
+          resolve('');
+        }
+      }, 100);
+    });
   } catch (error) {
     console.error('Error generating QR code:', error);
     return '';
