@@ -117,7 +117,8 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
   setFontSize: (size) => {
     const { editor } = get();
     if (editor) {
-      editor.commands.setFontSize(size);
+      // Use textStyle extension to set font size
+      editor.commands.setMark('textStyle', { fontSize: size });
     }
   },
 
