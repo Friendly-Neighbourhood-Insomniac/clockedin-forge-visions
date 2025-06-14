@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { X, Move, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Maximize2, Minimize2 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { X, Move, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Maximize2, Minimize2, Grid3X3, Layers, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface MediaEditorProps {
   element: HTMLElement;
@@ -19,6 +21,14 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, p
   const [height, setHeight] = useState('');
   const [alignment, setAlignment] = useState('left');
   const [margin, setMargin] = useState('10');
+  const [padding, setPadding] = useState('0');
+  const [rotation, setRotation] = useState(0);
+  const [opacity, setOpacity] = useState(100);
+  const [zIndex, setZIndex] = useState(1);
+  const [snapToGrid, setSnapToGrid] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState('free');
+  const [borderRadius, setBorderRadius] = useState(0);
+  const [shadow, setShadow] = useState('none');
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,6 +47,24 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, p
     
     const currentMargin = element.style.margin?.replace(/px/g, '') || '10';
     setMargin(currentMargin);
+    
+    const currentPadding = element.style.padding?.replace(/px/g, '') || '0';
+    setPadding(currentPadding);
+    
+    const currentOpacity = parseFloat(element.style.opacity || '1') * 100;
+    setOpacity(currentOpacity);
+    
+    const currentZIndex = parseInt(element.style.zIndex || '1');
+    setZIndex(currentZIndex);
+    
+    const transform = element.style.transform || '';
+    const rotateMatch = transform.match(/rotate\((-?\d+)deg\)/);
+    if (rotateMatch) {
+      setRotation(parseInt(rotateMatch[1]));
+    }
+    
+    const currentBorderRadius = parseInt(element.style.borderRadius?.replace(/px/g, '') || '0');
+    setBorderRadius(currentBorderRadius);
   }, [element]);
 
   const handleUpdate = () => {
@@ -46,17 +74,45 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, p
     element.style.marginRight = '';
     element.style.display = '';
     
-    // Apply dimensions
-    if (width) {
-      element.style.width = width.includes('px') || width.includes('%') ? width : `${width}px`;
-    }
-    if (height && height !== 'auto') {
-      element.style.height = height.includes('px') || height.includes('%') ? height : `${height}px`;
+    // Apply dimensions with aspect ratio constraint
+    let finalWidth = width;
+    let finalHeight = height;
+    
+    if (aspectRatio !== 'free' && width && height !== 'auto') {
+      const ratio = aspectRatio === '16:9' ? 16/9 : aspectRatio === '4:3' ? 4/3 : aspectRatio === '1:1' ? 1 : 16/9;
+      const widthNum = parseInt(width.replace(/px|%/g, ''));
+      finalHeight = `${Math.round(widthNum / ratio)}px`;
+      setHeight(finalHeight);
     }
     
-    // Apply margin
+    if (finalWidth) {
+      element.style.width = finalWidth.includes('px') || finalWidth.includes('%') ? finalWidth : `${finalWidth}px`;
+    }
+    if (finalHeight && finalHeight !== 'auto') {
+      element.style.height = finalHeight.includes('px') || finalHeight.includes('%') ? finalHeight : `${finalHeight}px`;
+    }
+    
+    // Apply spacing
     const marginValue = margin && !isNaN(Number(margin)) ? `${margin}px` : '10px';
+    const paddingValue = padding && !isNaN(Number(padding)) ? `${padding}px` : '0px';
     element.style.margin = marginValue;
+    element.style.padding = paddingValue;
+    
+    // Apply transform effects
+    const transforms = [];
+    if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
+    element.style.transform = transforms.join(' ');
+    
+    // Apply visual effects
+    element.style.opacity = (opacity / 100).toString();
+    element.style.zIndex = zIndex.toString();
+    element.style.borderRadius = `${borderRadius}px`;
+    
+    // Apply shadow
+    if (shadow === 'small') element.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+    else if (shadow === 'medium') element.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+    else if (shadow === 'large') element.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)';
+    else element.style.boxShadow = 'none';
     
     // Apply alignment
     switch (alignment) {
@@ -80,17 +136,23 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, p
     element.style.width = '';
     element.style.height = '';
     element.style.margin = '';
+    element.style.padding = '';
     element.style.float = '';
     element.style.display = '';
     element.style.marginLeft = '';
     element.style.marginRight = '';
+    element.style.transform = '';
+    element.style.opacity = '';
+    element.style.zIndex = '';
+    element.style.borderRadius = '';
+    element.style.boxShadow = '';
     
     onUpdate(element);
     onClose();
   };
 
   const moveElement = (direction: 'up' | 'down' | 'left' | 'right') => {
-    const step = 10;
+    const step = snapToGrid ? 20 : 5;
     const currentMarginTop = parseInt(element.style.marginTop) || 0;
     const currentMarginLeft = parseInt(element.style.marginLeft) || 0;
     
@@ -111,11 +173,12 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, p
     onUpdate(element);
   };
 
-  const quickResize = (size: 'small' | 'medium' | 'large') => {
+  const quickResize = (size: 'small' | 'medium' | 'large' | 'full') => {
     const sizes = {
       small: { width: '200px', height: 'auto' },
       medium: { width: '400px', height: 'auto' },
-      large: { width: '600px', height: 'auto' }
+      large: { width: '600px', height: 'auto' },
+      full: { width: '100%', height: 'auto' }
     };
     
     const { width: newWidth, height: newHeight } = sizes[size];
@@ -127,22 +190,31 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, p
     onUpdate(element);
   };
 
+  const duplicateElement = () => {
+    const clonedElement = element.cloneNode(true) as HTMLElement;
+    clonedElement.style.marginLeft = `${(parseInt(element.style.marginLeft) || 0) + 20}px`;
+    clonedElement.style.marginTop = `${(parseInt(element.style.marginTop) || 0) + 20}px`;
+    element.parentNode?.insertBefore(clonedElement, element.nextSibling);
+    onUpdate(element);
+    onClose();
+  };
+
   return (
     <div
       ref={cardRef}
-      className="fixed z-[9999] bg-slate-800 border border-cyan-400/30 shadow-2xl rounded-lg"
+      className="fixed z-[9999] bg-slate-800 border border-cyan-400/30 shadow-2xl rounded-lg max-h-[90vh] overflow-y-auto"
       style={{ 
         left: position.x, 
         top: position.y,
-        minWidth: '320px',
-        maxWidth: '400px'
+        minWidth: '360px',
+        maxWidth: '420px'
       }}
     >
-      <div className="p-3 border-b border-slate-700">
+      <div className="p-3 border-b border-slate-700 sticky top-0 bg-slate-800 z-10">
         <div className="flex items-center justify-between">
           <span className="text-cyan-100 font-medium text-sm flex items-center gap-2">
             <Move className="w-4 h-4" />
-            Edit Media
+            Professional Media Editor
           </span>
           <Button onClick={onClose} size="sm" variant="ghost" className="text-slate-400 h-6 w-6 p-0">
             <X className="w-4 h-4" />
@@ -151,100 +223,223 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, p
       </div>
       
       <div className="p-4 space-y-4">
-        {/* Quick Resize */}
-        <div>
-          <Label className="text-slate-300 text-xs mb-2 block">Quick Resize</Label>
-          <div className="flex gap-2">
-            <Button onClick={() => quickResize('small')} size="sm" variant="outline" className="text-xs">
-              <Minimize2 className="w-3 h-3 mr-1" />
-              Small
-            </Button>
-            <Button onClick={() => quickResize('medium')} size="sm" variant="outline" className="text-xs">
-              Medium
-            </Button>
-            <Button onClick={() => quickResize('large')} size="sm" variant="outline" className="text-xs">
-              <Maximize2 className="w-3 h-3 mr-1" />
-              Large
-            </Button>
+        {/* Quick Actions */}
+        <div className="flex gap-2">
+          <Button onClick={() => quickResize('small')} size="sm" variant="outline" className="text-xs flex-1">
+            <Minimize2 className="w-3 h-3 mr-1" />
+            Small
+          </Button>
+          <Button onClick={() => quickResize('medium')} size="sm" variant="outline" className="text-xs flex-1">
+            Medium
+          </Button>
+          <Button onClick={() => quickResize('large')} size="sm" variant="outline" className="text-xs flex-1">
+            <Maximize2 className="w-3 h-3 mr-1" />
+            Large
+          </Button>
+          <Button onClick={() => quickResize('full')} size="sm" variant="outline" className="text-xs flex-1">
+            Full
+          </Button>
+        </div>
+
+        {/* Dimensions & Aspect Ratio */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Label className="text-slate-300 text-xs">Aspect Ratio</Label>
+            <Select value={aspectRatio} onValueChange={setAspectRatio}>
+              <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectItem value="free" className="text-slate-200">Free</SelectItem>
+                <SelectItem value="16:9" className="text-slate-200">16:9</SelectItem>
+                <SelectItem value="4:3" className="text-slate-200">4:3</SelectItem>
+                <SelectItem value="1:1" className="text-slate-200">1:1</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-slate-300 text-xs">Width</Label>
+              <Input
+                value={width}
+                onChange={(e) => setWidth(e.target.value)}
+                placeholder="300px"
+                className="bg-slate-700 border-slate-600 text-slate-100 h-8"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-300 text-xs">Height</Label>
+              <Input
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                placeholder="auto"
+                className="bg-slate-700 border-slate-600 text-slate-100 h-8"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Dimensions */}
+        {/* Positioning & Grid */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-slate-300 text-xs">Grid Snap</Label>
+            <Switch checked={snapToGrid} onCheckedChange={setSnapToGrid} />
+          </div>
+          
+          <div>
+            <Label className="text-slate-300 text-xs">Alignment</Label>
+            <Select value={alignment} onValueChange={setAlignment}>
+              <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectItem value="left" className="text-slate-200">Left</SelectItem>
+                <SelectItem value="center" className="text-slate-200">Center</SelectItem>
+                <SelectItem value="right" className="text-slate-200">Right</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Fine Positioning */}
+          <div>
+            <Label className="text-slate-300 text-xs mb-2 block">
+              Fine Positioning {snapToGrid && <span className="text-cyan-400">(Grid: 20px)</span>}
+            </Label>
+            <div className="grid grid-cols-3 gap-1">
+              <div></div>
+              <Button onClick={() => moveElement('up')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
+                <ArrowUp className="w-4 h-4" />
+              </Button>
+              <div></div>
+              <Button onClick={() => moveElement('left')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <div></div>
+              <Button onClick={() => moveElement('right')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+              <div></div>
+              <Button onClick={() => moveElement('down')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
+                <ArrowDown className="w-4 h-4" />
+              </Button>
+              <div></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Spacing */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="text-slate-300 text-xs">Width</Label>
+            <Label className="text-slate-300 text-xs">Margin (px)</Label>
             <Input
-              value={width}
-              onChange={(e) => setWidth(e.target.value)}
-              placeholder="300px"
+              value={margin}
+              onChange={(e) => setMargin(e.target.value)}
+              placeholder="10"
               className="bg-slate-700 border-slate-600 text-slate-100 h-8"
             />
           </div>
           <div>
-            <Label className="text-slate-300 text-xs">Height</Label>
+            <Label className="text-slate-300 text-xs">Padding (px)</Label>
             <Input
-              value={height}
-              onChange={(e) => setHeight(e.target.value)}
-              placeholder="auto"
+              value={padding}
+              onChange={(e) => setPadding(e.target.value)}
+              placeholder="0"
               className="bg-slate-700 border-slate-600 text-slate-100 h-8"
             />
           </div>
         </div>
-        
-        {/* Alignment */}
-        <div>
-          <Label className="text-slate-300 text-xs">Alignment</Label>
-          <Select value={alignment} onValueChange={setAlignment}>
-            <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-slate-700 border-slate-600">
-              <SelectItem value="left" className="text-slate-200">Left</SelectItem>
-              <SelectItem value="center" className="text-slate-200">Center</SelectItem>
-              <SelectItem value="right" className="text-slate-200">Right</SelectItem>
-            </SelectContent>
-          </Select>
+
+        {/* Transform & Effects */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-slate-300 text-xs mb-2 block">Rotation: {rotation}°</Label>
+            <Slider
+              value={[rotation]}
+              onValueChange={(value) => setRotation(value[0])}
+              min={-180}
+              max={180}
+              step={5}
+              className="w-full"
+            />
+          </div>
+          
+          <div>
+            <Label className="text-slate-300 text-xs mb-2 block">Opacity: {opacity}%</Label>
+            <Slider
+              value={[opacity]}
+              onValueChange={(value) => setOpacity(value[0])}
+              min={0}
+              max={100}
+              step={5}
+              className="w-full"
+            />
+          </div>
+          
+          <div>
+            <Label className="text-slate-300 text-xs mb-2 block">Border Radius: {borderRadius}px</Label>
+            <Slider
+              value={[borderRadius]}
+              onValueChange={(value) => setBorderRadius(value[0])}
+              min={0}
+              max={50}
+              step={1}
+              className="w-full"
+            />
+          </div>
         </div>
 
-        {/* Margin */}
-        <div>
-          <Label className="text-slate-300 text-xs">Margin (px)</Label>
-          <Input
-            value={margin}
-            onChange={(e) => setMargin(e.target.value)}
-            placeholder="10"
-            className="bg-slate-700 border-slate-600 text-slate-100 h-8"
-          />
-        </div>
+        {/* Layer Management */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-slate-300 text-xs flex items-center gap-2">
+              <Layers className="w-3 h-3" />
+              Layer Order (Z-Index)
+            </Label>
+            <div className="flex items-center gap-2 mt-2">
+              <Button 
+                onClick={() => setZIndex(Math.max(1, zIndex - 1))} 
+                size="sm" 
+                variant="outline" 
+                className="text-xs"
+              >
+                Send Back
+              </Button>
+              <span className="text-slate-300 text-xs flex-1 text-center">{zIndex}</span>
+              <Button 
+                onClick={() => setZIndex(zIndex + 1)} 
+                size="sm" 
+                variant="outline" 
+                className="text-xs"
+              >
+                Bring Forward
+              </Button>
+            </div>
+          </div>
 
-        {/* Movement Controls */}
-        <div>
-          <Label className="text-slate-300 text-xs mb-2 block">Fine Positioning</Label>
-          <div className="grid grid-cols-3 gap-1">
-            <div></div>
-            <Button onClick={() => moveElement('up')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
-              <ArrowUp className="w-4 h-4" />
-            </Button>
-            <div></div>
-            <Button onClick={() => moveElement('left')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div></div>
-            <Button onClick={() => moveElement('right')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-            <div></div>
-            <Button onClick={() => moveElement('down')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
-              <ArrowDown className="w-4 h-4" />
-            </Button>
-            <div></div>
+          <div>
+            <Label className="text-slate-300 text-xs">Shadow</Label>
+            <Select value={shadow} onValueChange={setShadow}>
+              <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectItem value="none" className="text-slate-200">None</SelectItem>
+                <SelectItem value="small" className="text-slate-200">Small</SelectItem>
+                <SelectItem value="medium" className="text-slate-200">Medium</SelectItem>
+                <SelectItem value="large" className="text-slate-200">Large</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-2">
           <Button onClick={handleUpdate} size="sm" className="bg-cyan-600 hover:bg-cyan-700 flex-1">
-            Apply
+            Apply Changes
+          </Button>
+          <Button onClick={duplicateElement} size="sm" variant="outline" className="text-slate-300">
+            Duplicate
           </Button>
           <Button onClick={handleReset} size="sm" variant="ghost" className="text-slate-300">
             <RotateCcw className="w-4 h-4" />
