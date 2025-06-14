@@ -15,6 +15,7 @@ import {
   Palette
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import MediaInsertion from './MediaInsertion';
 
 const BLOCK_TYPES = [
   { label: 'H1', style: 'header-one' },
@@ -130,6 +131,11 @@ const EditorToolbar: React.FC = () => {
             >
               <ListOrdered className="w-4 h-4" />
             </Button>
+          </div>
+
+          {/* Media Insertion */}
+          <div className="flex gap-1 mr-4 border-l border-slate-600 pl-4">
+            <MediaInsertion editorState={editorState} setEditorState={setEditorState} />
           </div>
 
           {/* Additional Tools */}
