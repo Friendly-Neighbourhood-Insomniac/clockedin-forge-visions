@@ -76,6 +76,13 @@ const FlipbookPreview: React.FC<FlipbookPreviewProps> = ({ isOpen, onClose, book
               showPageCorners={true}
               disableFlipByClick={false}
               className="flipbook"
+              style={{}}
+              startPage={0}
+              drawShadow={true}
+              mobileScrollSupport={true}
+              clickEventForward={true}
+              useMouseEvents={true}
+              swipeDistance={30}
             >
               {/* Cover Page */}
               <div className="page cover-page">
@@ -142,18 +149,20 @@ const FlipbookPreview: React.FC<FlipbookPreviewProps> = ({ isOpen, onClose, book
           </div>
         </div>
 
-        <style jsx>{`
-          .flipbook-container {
-            perspective: 1000px;
-          }
-          .page {
-            background: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-          }
-          .cover-page, .back-cover {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-          }
-        `}</style>
+        <style>
+          {`
+            .flipbook-container {
+              perspective: 1000px;
+            }
+            .page {
+              background: white;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            .cover-page, .back-cover {
+              background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            }
+          `}
+        </style>
       </DialogContent>
     </Dialog>
   );
