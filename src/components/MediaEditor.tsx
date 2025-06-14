@@ -1,13 +1,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
-import { X, Move, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Maximize2, Minimize2, Grid3X3, Layers, ZoomIn, ZoomOut, Trash2, Copy, MousePointer } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
+import MediaEditorHeader from './media-editor/MediaEditorHeader';
+import QuickActionsPanel from './media-editor/QuickActionsPanel';
+import MovementControls from './media-editor/MovementControls';
+import DimensionsPanel from './media-editor/DimensionsPanel';
+import StylePanel from './media-editor/StylePanel';
+import LayerPanel from './media-editor/LayerPanel';
 
 interface MediaEditorProps {
   element: HTMLElement;
@@ -269,245 +269,50 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, p
         maxWidth: '420px'
       }}
     >
-      <div className="p-3 border-b border-slate-700 sticky top-0 bg-slate-800 z-10">
-        <div className="flex items-center justify-between">
-          <span className="text-cyan-100 font-medium text-sm flex items-center gap-2">
-            <MousePointer className="w-4 h-4" />
-            Element Editor
-          </span>
-          <div className="flex gap-1">
-            <Button onClick={handleDelete} size="sm" variant="ghost" className="text-red-400 hover:text-red-300 h-6 w-6 p-0">
-              <Trash2 className="w-4 h-4" />
-            </Button>
-            <Button onClick={onClose} size="sm" variant="ghost" className="text-slate-400 h-6 w-6 p-0">
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-        <div className="text-xs text-slate-400 mt-1">
-          DEL: Delete • ESC: Close • +/-: Scale • Arrows: Move
-        </div>
-      </div>
+      <MediaEditorHeader onClose={onClose} onDelete={handleDelete} />
       
       <div className="p-4 space-y-4">
-        {/* Quick Actions */}
-        <div className="space-y-2">
-          <Label className="text-slate-300 text-xs font-medium">Quick Actions</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <Button onClick={() => quickScale(0.5)} size="sm" variant="outline" className="text-xs">
-              <ZoomOut className="w-3 h-3 mr-1" />
-              50%
-            </Button>
-            <Button onClick={() => quickScale(2)} size="sm" variant="outline" className="text-xs">
-              <ZoomIn className="w-3 h-3 mr-1" />
-              200%
-            </Button>
-            <Button onClick={duplicateElement} size="sm" variant="outline" className="text-xs">
-              <Copy className="w-3 h-3 mr-1" />
-              Duplicate
-            </Button>
-            <Button onClick={handleDelete} size="sm" variant="destructive" className="text-xs">
-              <Trash2 className="w-3 h-3 mr-1" />
-              Delete
-            </Button>
-          </div>
-        </div>
+        <QuickActionsPanel
+          onScale={quickScale}
+          onDuplicate={duplicateElement}
+          onDelete={handleDelete}
+          onQuickResize={quickResize}
+        />
 
-        {/* Quick Resize */}
-        <div className="space-y-2">
-          <Label className="text-slate-300 text-xs font-medium">Quick Resize</Label>
-          <div className="grid grid-cols-4 gap-1">
-            <Button onClick={() => quickResize('small')} size="sm" variant="outline" className="text-xs">
-              <Minimize2 className="w-3 h-3" />
-            </Button>
-            <Button onClick={() => quickResize('medium')} size="sm" variant="outline" className="text-xs">
-              S
-            </Button>
-            <Button onClick={() => quickResize('large')} size="sm" variant="outline" className="text-xs">
-              <Maximize2 className="w-3 h-3" />
-            </Button>
-            <Button onClick={() => quickResize('full')} size="sm" variant="outline" className="text-xs">
-              Full
-            </Button>
-          </div>
-        </div>
+        <MovementControls
+          snapToGrid={snapToGrid}
+          onSnapToGridChange={setSnapToGrid}
+          onMove={moveElement}
+        />
 
-        {/* Precise Scaling */}
-        <div className="space-y-2">
-          <Label className="text-slate-300 text-xs font-medium">Precise Scaling</Label>
-          <div className="grid grid-cols-5 gap-1">
-            <Button onClick={() => quickScale(0.75)} size="sm" variant="ghost" className="text-xs">75%</Button>
-            <Button onClick={() => quickScale(0.9)} size="sm" variant="ghost" className="text-xs">90%</Button>
-            <Button onClick={() => quickScale(1)} size="sm" variant="ghost" className="text-xs">100%</Button>
-            <Button onClick={() => quickScale(1.25)} size="sm" variant="ghost" className="text-xs">125%</Button>
-            <Button onClick={() => quickScale(1.5)} size="sm" variant="ghost" className="text-xs">150%</Button>
-          </div>
-        </div>
+        <DimensionsPanel
+          width={width}
+          height={height}
+          aspectRatio={aspectRatio}
+          alignment={alignment}
+          margin={margin}
+          padding={padding}
+          onWidthChange={setWidth}
+          onHeightChange={setHeight}
+          onAspectRatioChange={setAspectRatio}
+          onAlignmentChange={setAlignment}
+          onMarginChange={setMargin}
+          onPaddingChange={setPadding}
+        />
 
-        {/* Movement Controls */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-slate-300 text-xs font-medium">Movement</Label>
-            <div className="flex items-center gap-2">
-              <Label className="text-slate-300 text-xs">Grid Snap</Label>
-              <Switch checked={snapToGrid} onCheckedChange={setSnapToGrid} />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-3 gap-1">
-            <div></div>
-            <Button onClick={() => moveElement('up')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
-              <ArrowUp className="w-4 h-4" />
-            </Button>
-            <div></div>
-            <Button onClick={() => moveElement('left')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div className="text-center text-xs text-slate-400 flex items-center justify-center">
-              {snapToGrid ? '20px' : '5px'}
-            </div>
-            <Button onClick={() => moveElement('right')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-            <div></div>
-            <Button onClick={() => moveElement('down')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
-              <ArrowDown className="w-4 h-4" />
-            </Button>
-            <div></div>
-          </div>
-        </div>
+        <StylePanel
+          rotation={rotation}
+          opacity={opacity}
+          borderRadius={borderRadius}
+          onRotationChange={setRotation}
+          onOpacityChange={setOpacity}
+          onBorderRadiusChange={setBorderRadius}
+        />
 
-        {/* Dimensions */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Label className="text-slate-300 text-xs">Aspect Ratio</Label>
-            <Select value={aspectRatio} onValueChange={setAspectRatio}>
-              <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-700 border-slate-600">
-                <SelectItem value="free" className="text-slate-200">Free</SelectItem>
-                <SelectItem value="16:9" className="text-slate-200">16:9</SelectItem>
-                <SelectItem value="4:3" className="text-slate-200">4:3</SelectItem>
-                <SelectItem value="1:1" className="text-slate-200">1:1</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-slate-300 text-xs">Width</Label>
-              <Input
-                value={width}
-                onChange={(e) => setWidth(e.target.value)}
-                placeholder="300px"
-                className="bg-slate-700 border-slate-600 text-slate-100 h-8"
-              />
-            </div>
-            <div>
-              <Label className="text-slate-300 text-xs">Height</Label>
-              <Input
-                value={height}
-                onChange={(e) => setHeight(e.target.value)}
-                placeholder="auto"
-                className="bg-slate-700 border-slate-600 text-slate-100 h-8"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Alignment */}
-        <div>
-          <Label className="text-slate-300 text-xs">Alignment</Label>
-          <Select value={alignment} onValueChange={setAlignment}>
-            <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-slate-700 border-slate-600">
-              <SelectItem value="left" className="text-slate-200">Left</SelectItem>
-              <SelectItem value="center" className="text-slate-200">Center</SelectItem>
-              <SelectItem value="right" className="text-slate-200">Right</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Spacing */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-slate-300 text-xs">Margin (px)</Label>
-            <Input
-              value={margin}
-              onChange={(e) => setMargin(e.target.value)}
-              placeholder="10"
-              className="bg-slate-700 border-slate-600 text-slate-100 h-8"
-            />
-          </div>
-          <div>
-            <Label className="text-slate-300 text-xs">Padding (px)</Label>
-            <Input
-              value={padding}
-              onChange={(e) => setPadding(e.target.value)}
-              placeholder="0"
-              className="bg-slate-700 border-slate-600 text-slate-100 h-8"
-            />
-          </div>
-        </div>
-
-        {/* Advanced Controls */}
-        <div className="space-y-3">
-          <div>
-            <Label className="text-slate-300 text-xs mb-2 block">Rotation: {rotation}°</Label>
-            <Slider
-              value={[rotation]}
-              onValueChange={(value) => setRotation(value[0])}
-              min={-180}
-              max={180}
-              step={5}
-              className="w-full"
-            />
-          </div>
-          
-          <div>
-            <Label className="text-slate-300 text-xs mb-2 block">Opacity: {opacity}%</Label>
-            <Slider
-              value={[opacity]}
-              onValueChange={(value) => setOpacity(value[0])}
-              min={0}
-              max={100}
-              step={5}
-              className="w-full"
-            />
-          </div>
-        </div>
-
-        {/* Layer Management */}
-        <div className="space-y-3">
-          <div>
-            <Label className="text-slate-300 text-xs flex items-center gap-2">
-              <Layers className="w-3 h-3" />
-              Layer Order
-            </Label>
-            <div className="flex items-center gap-2 mt-2">
-              <Button 
-                onClick={() => setZIndex(Math.max(1, zIndex - 1))} 
-                size="sm" 
-                variant="outline" 
-                className="text-xs"
-              >
-                Back
-              </Button>
-              <span className="text-slate-300 text-xs flex-1 text-center">{zIndex}</span>
-              <Button 
-                onClick={() => setZIndex(zIndex + 1)} 
-                size="sm" 
-                variant="outline" 
-                className="text-xs"
-              >
-                Forward
-              </Button>
-            </div>
-          </div>
-        </div>
+        <LayerPanel
+          zIndex={zIndex}
+          onZIndexChange={setZIndex}
+        />
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-2">
