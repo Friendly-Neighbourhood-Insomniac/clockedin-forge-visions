@@ -1,16 +1,16 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Download, FileText, Eye, Save, Plus, Trash2, BookOpen, Settings } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BookOpen, Settings } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import FlipbookPreview from '@/components/FlipbookPreview';
 import BookMetadata from '@/components/BookMetadata';
-import AdvancedToolbar from '@/components/AdvancedToolbar';
 import BookStats from '@/components/BookStats';
 import MediaEditor from '@/components/MediaEditor';
+import ChapterManager from '@/components/ChapterManager';
+import TextEditor from '@/components/TextEditor';
+import BookEditorHeader from '@/components/BookEditorHeader';
+import { useMediaEditor } from '@/hooks/useMediaEditor';
 import { convertEmbedsToQRCodes } from '@/utils/qrCodeGenerator';
 
 interface Chapter {
@@ -56,6 +56,19 @@ const BookEditor = () => {
   });
 
   const currentChapter = bookData.chapters.find(ch => ch.id === selectedChapter);
+
+  const syncEditorContent = () => {
+    if (editorRef.current && selectedChapter) {
+      const content = editorRef.current.innerHTML;
+      updateChapter(selectedChapter, 'content', content);
+    }
+  };
+
+  const { setupMediaEventListeners } = useMediaEditor({
+    editorRef,
+    onMediaEditorOpen: setMediaEditor,
+    onContentSync: syncEditorContent
+  });
 
   // Load data from localStorage on component mount
   useEffect(() => {
@@ -117,13 +130,6 @@ const BookEditor = () => {
   const formatText = (command: string, value?: string) => {
     document.execCommand(command, false, value);
     syncEditorContent();
-  };
-
-  const syncEditorContent = () => {
-    if (editorRef.current && selectedChapter) {
-      const content = editorRef.current.innerHTML;
-      updateChapter(selectedChapter, 'content', content);
-    }
   };
 
   const handleFontChange = (font: string) => {
@@ -210,158 +216,9 @@ const BookEditor = () => {
     }, 100);
   };
 
-  const setupMediaEventListeners = () => {
-    if (!editorRef.current) return;
-    
-    const mediaElements = editorRef.current.querySelectorAll('.editable-media');
-    
-    mediaElements.forEach((element) => {
-      const mediaElement = element as HTMLElement;
-      
-      // Remove existing listeners by cloning
-      const newElement = mediaElement.cloneNode(true) as HTMLElement;
-      mediaElement.parentNode?.replaceChild(newElement, mediaElement);
-      
-      // Double-click to edit
-      newElement.addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const rect = newElement.getBoundingClientRect();
-        const x = Math.min(rect.right + 10, window.innerWidth - 350);
-        const y = Math.max(10, rect.top);
-        
-        setMediaEditor({
-          element: newElement,
-          position: { x, y }
-        });
-      });
-
-      // Hover effects
-      newElement.addEventListener('mouseenter', () => {
-        newElement.style.border = '2px dashed rgb(6, 182, 212)';
-        newElement.style.transform = 'scale(1.01)';
-        newElement.style.boxShadow = '0 4px 12px rgba(6, 182, 212, 0.2)';
-        
-        // Show drag indicator
-        if (!newElement.querySelector('.drag-indicator')) {
-          const indicator = document.createElement('div');
-          indicator.className = 'drag-indicator';
-          indicator.style.cssText = `
-            position: absolute;
-            top: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgb(6, 182, 212);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: bold;
-            z-index: 10;
-            pointer-events: none;
-          `;
-          indicator.textContent = 'DRAG TO MOVE • DOUBLE-CLICK TO EDIT';
-          newElement.style.position = 'relative';
-          newElement.appendChild(indicator);
-        }
-      });
-
-      newElement.addEventListener('mouseleave', () => {
-        newElement.style.border = '2px solid transparent';
-        newElement.style.transform = 'scale(1)';
-        newElement.style.boxShadow = 'none';
-        
-        // Remove drag indicator
-        const indicator = newElement.querySelector('.drag-indicator');
-        if (indicator) {
-          indicator.remove();
-        }
-      });
-
-      // Drag and drop
-      newElement.addEventListener('dragstart', (e) => {
-        e.dataTransfer!.effectAllowed = 'move';
-        e.dataTransfer!.setData('text/html', newElement.outerHTML);
-        newElement.style.opacity = '0.5';
-        
-        // Add visual feedback to editor
-        if (editorRef.current) {
-          editorRef.current.style.background = 'rgba(6, 182, 212, 0.05)';
-          editorRef.current.style.border = '2px dashed rgb(6, 182, 212)';
-        }
-      });
-
-      newElement.addEventListener('dragend', () => {
-        newElement.style.opacity = '1';
-        
-        // Remove visual feedback
-        if (editorRef.current) {
-          editorRef.current.style.background = '';
-          editorRef.current.style.border = '';
-        }
-      });
-    });
-
-    // Setup drop zone
-    if (editorRef.current) {
-      editorRef.current.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer!.dropEffect = 'move';
-      });
-
-      editorRef.current.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const htmlData = e.dataTransfer!.getData('text/html');
-        
-        if (htmlData) {
-          // Remove the original element to prevent duplication
-          const draggedElement = editorRef.current!.querySelector('.editable-media[style*="opacity: 0.5"]');
-          if (draggedElement) {
-            draggedElement.remove();
-          }
-          
-          // Insert at drop position
-          const range = document.caretRangeFromPoint(e.clientX, e.clientY);
-          if (range) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlData;
-            const element = tempDiv.firstChild as HTMLElement;
-            
-            if (element) {
-              element.style.opacity = '1';
-              range.insertNode(element);
-              syncEditorContent();
-              
-              // Re-setup listeners
-              setTimeout(() => {
-                setupMediaEventListeners();
-              }, 100);
-            }
-          }
-        }
-        
-        // Remove visual feedback
-        if (editorRef.current) {
-          editorRef.current.style.background = '';
-          editorRef.current.style.border = '';
-        }
-      });
-    }
-  };
-
   const handleMediaUpdate = (element: HTMLElement) => {
     syncEditorContent();
   };
-
-  // Setup media event listeners when chapter changes
-  useEffect(() => {
-    if (currentChapter && editorRef.current) {
-      setTimeout(() => {
-        setupMediaEventListeners();
-      }, 300);
-    }
-  }, [selectedChapter, currentChapter?.content]);
 
   const handleMetadataChange = (field: string, value: string) => {
     if (field === 'title' || field === 'author' || field === 'description') {
@@ -520,41 +377,11 @@ const BookEditor = () => {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(6,182,212,0.05),transparent_50%)]" />
       
       <div className="relative z-10 container mx-auto px-4 py-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-4xl font-playfair font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-amber-300">
-              BookForge Professional
-            </h1>
-            <div className="flex gap-4">
-              <Button
-                onClick={generateEPUB}
-                className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export EPUB
-              </Button>
-              <Button
-                onClick={downloadPDF}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download PDF
-              </Button>
-              <Button
-                onClick={openFlipbookPreview}
-                className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Flipbook Preview
-              </Button>
-            </div>
-          </div>
-        </motion.div>
+        <BookEditorHeader
+          onGenerateEPUB={generateEPUB}
+          onDownloadPDF={downloadPDF}
+          onOpenFlipbookPreview={openFlipbookPreview}
+        />
 
         <Tabs defaultValue="editor" className="space-y-6">
           <TabsList className="bg-slate-800/50 border-cyan-400/30">
@@ -572,103 +399,31 @@ const BookEditor = () => {
             <div className="grid lg:grid-cols-4 gap-6">
               {/* Sidebar */}
               <div className="lg:col-span-1 space-y-4">
-                {/* Chapters */}
-                <Card className="bg-slate-800/50 border-cyan-400/30">
-                  <CardHeader>
-                    <CardTitle className="text-cyan-100 flex items-center justify-between">
-                      Chapters
-                      <Button
-                        onClick={addChapter}
-                        size="sm"
-                        className="bg-cyan-600 hover:bg-cyan-700"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {bookData.chapters.map((chapter) => (
-                      <div
-                        key={chapter.id}
-                        className={`p-3 rounded cursor-pointer transition-all ${
-                          selectedChapter === chapter.id
-                            ? 'bg-cyan-600/20 border border-cyan-400/40'
-                            : 'bg-slate-700/30 hover:bg-slate-700/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span
-                            className="text-slate-200 flex-1"
-                            onClick={() => setSelectedChapter(chapter.id)}
-                          >
-                            {chapter.title}
-                          </span>
-                          <Button
-                            onClick={() => deleteChapter(chapter.id)}
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-400 hover:text-red-300 p-1"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    {bookData.chapters.length === 0 && (
-                      <p className="text-slate-400 text-center py-4">
-                        No chapters yet. Click + to add one.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+                <ChapterManager
+                  chapters={bookData.chapters}
+                  selectedChapter={selectedChapter}
+                  onChapterSelect={setSelectedChapter}
+                  onAddChapter={addChapter}
+                  onDeleteChapter={deleteChapter}
+                />
 
-                {/* Book Stats */}
                 <BookStats chapters={bookData.chapters} />
               </div>
 
               {/* Editor */}
               <div className="lg:col-span-3 relative">
-                <Card className="bg-slate-800/50 border-cyan-400/30">
-                  <CardHeader>
-                    <Input
-                      value={currentChapter?.title || ''}
-                      onChange={(e) => updateChapter(selectedChapter, 'title', e.target.value)}
-                      placeholder="Chapter Title"
-                      className="text-xl font-bold bg-transparent border-none text-cyan-100 placeholder-slate-400 p-0 h-auto focus:ring-0"
-                    />
-                  </CardHeader>
-                  
-                  {/* Advanced Toolbar */}
-                  <AdvancedToolbar
-                    onFormat={formatText}
-                    onImageInsert={handleImageInsert}
-                    onEmbedInsert={handleEmbedInsert}
-                    onFontChange={handleFontChange}
-                    onFontSizeChange={handleFontSizeChange}
-                    onColorChange={handleColorChange}
-                  />
-                  
-                  <CardContent className="relative">
-                    <div
-                      ref={editorRef}
-                      contentEditable
-                      className="min-h-[500px] p-4 bg-slate-900/30 rounded-lg border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
-                      style={{ lineHeight: '1.6' }}
-                      dangerouslySetInnerHTML={{ __html: currentChapter?.content || '' }}
-                      onBlur={syncEditorContent}
-                      onInput={syncEditorContent}
-                      suppressContentEditableWarning={true}
-                    />
-                    {!currentChapter && (
-                      <div className="text-center text-slate-400 py-20">
-                        <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                        <p className="text-lg mb-2">Select a chapter to start writing</p>
-                        <p className="text-sm">📷 Upload images • 🎥 Embed videos • 🖱️ Drag to reposition</p>
-                        <p className="text-sm mt-1">Double-click media to edit size and alignment</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <TextEditor
+                  currentChapter={currentChapter}
+                  selectedChapter={selectedChapter}
+                  onUpdateChapter={updateChapter}
+                  onImageInsert={handleImageInsert}
+                  onEmbedInsert={handleEmbedInsert}
+                  onFormatText={formatText}
+                  onFontChange={handleFontChange}
+                  onFontSizeChange={handleFontSizeChange}
+                  onColorChange={handleColorChange}
+                  onSetupMediaListeners={setupMediaEventListeners}
+                />
               </div>
             </div>
           </TabsContent>
