@@ -38,31 +38,36 @@ const TurnJsFlipbook: React.FC<TurnJsFlipbookProps> = ({
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [turnInstance, setTurnInstance] = useState<any>(null);
 
   useEffect(() => {
     const loadTurnJs = async () => {
-      // Load jQuery and Turn.js
-      if (!window.$) {
-        const jqueryScript = document.createElement('script');
-        jqueryScript.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
-        document.head.appendChild(jqueryScript);
-        
-        await new Promise((resolve) => {
-          jqueryScript.onload = resolve;
-        });
-      }
+      try {
+        // Load jQuery and Turn.js
+        if (!window.$) {
+          const jqueryScript = document.createElement('script');
+          jqueryScript.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
+          document.head.appendChild(jqueryScript);
+          
+          await new Promise((resolve) => {
+            jqueryScript.onload = resolve;
+          });
+        }
 
-      if (!window.$.fn.turn) {
-        const turnScript = document.createElement('script');
-        turnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/turn.js/3/turn.min.js';
-        document.head.appendChild(turnScript);
-        
-        await new Promise((resolve) => {
-          turnScript.onload = resolve;
-        });
-      }
+        if (!window.$.fn.turn) {
+          const turnScript = document.createElement('script');
+          turnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/turn.js/3/turn.min.js';
+          document.head.appendChild(turnScript);
+          
+          await new Promise((resolve) => {
+            turnScript.onload = resolve;
+          });
+        }
 
-      setIsLoaded(true);
+        setIsLoaded(true);
+      } catch (error) {
+        console.error('Error loading Turn.js:', error);
+      }
     };
 
     loadTurnJs();
@@ -71,51 +76,79 @@ const TurnJsFlipbook: React.FC<TurnJsFlipbookProps> = ({
   useEffect(() => {
     if (!isLoaded || !flipbookRef.current || !window.$ || !window.$.fn.turn) return;
 
-    const totalPagesCount = bookData.chapters.length + 2; // +2 for cover and back cover
-    setTotalPages(totalPagesCount);
+    try {
+      const totalPagesCount = bookData.chapters.length + 2; // +2 for cover and back cover
+      setTotalPages(totalPagesCount);
 
-    // Initialize Turn.js
-    const $flipbook = window.$(flipbookRef.current);
-    
-    $flipbook.turn({
-      width: width,
-      height: height,
-      autoCenter: true,
-      elevation: 50,
-      gradients: true,
-      acceleration: true,
-      display: 'double',
-      duration: 1000,
-      pages: totalPagesCount,
-      when: {
-        turned: function(event: any, page: number) {
-          setCurrentPage(page);
+      // Initialize Turn.js
+      const $flipbook = window.$(flipbookRef.current);
+      
+      const turnConfig = {
+        width: width,
+        height: height,
+        autoCenter: true,
+        elevation: 50,
+        gradients: true,
+        acceleration: true,
+        display: 'double',
+        duration: 1000,
+        pages: totalPagesCount,
+        when: {
+          turned: function(event: any, page: number) {
+            setCurrentPage(page);
+          }
         }
-      }
-    });
+      };
+
+      $flipbook.turn(turnConfig);
+      setTurnInstance($flipbook);
+
+    } catch (error) {
+      console.error('Error initializing Turn.js:', error);
+    }
 
     return () => {
-      if ($flipbook.turn) {
-        $flipbook.turn('destroy');
+      try {
+        if (turnInstance && turnInstance.turn && typeof turnInstance.turn === 'function') {
+          // Check if the turn instance still exists and has the destroy method
+          if (turnInstance.data('turn')) {
+            turnInstance.turn('destroy');
+          }
+        }
+      } catch (error) {
+        console.error('Error destroying Turn.js instance:', error);
       }
+      setTurnInstance(null);
     };
   }, [isLoaded, bookData, width, height]);
 
   const nextPage = () => {
-    if (flipbookRef.current && window.$) {
-      window.$(flipbookRef.current).turn('next');
+    try {
+      if (turnInstance && turnInstance.turn) {
+        turnInstance.turn('next');
+      }
+    } catch (error) {
+      console.error('Error turning to next page:', error);
     }
   };
 
   const prevPage = () => {
-    if (flipbookRef.current && window.$) {
-      window.$(flipbookRef.current).turn('previous');
+    try {
+      if (turnInstance && turnInstance.turn) {
+        turnInstance.turn('previous');
+      }
+    } catch (error) {
+      console.error('Error turning to previous page:', error);
     }
   };
 
   const goToPage = (page: number) => {
-    if (flipbookRef.current && window.$) {
-      window.$(flipbookRef.current).turn('page', page);
+    try {
+      if (turnInstance && turnInstance.turn) {
+        turnInstance.turn('page', page);
+      }
+    } catch (error) {
+      console.error('Error going to page:', error);
     }
   };
 
