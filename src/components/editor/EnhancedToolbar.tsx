@@ -55,7 +55,7 @@ const EnhancedToolbar: React.FC = () => {
 
   const insertMathEquation = () => {
     if (mathExpression.trim()) {
-      editor.commands.insertContent(`<div class="math-block" data-math="${mathExpression}">${mathExpression}</div>`);
+      editor.commands.insertMath(mathExpression);
       setMathExpression('');
       setShowMathDialog(false);
     }
@@ -78,7 +78,8 @@ const EnhancedToolbar: React.FC = () => {
   };
 
   const setFontSize = (size: string) => {
-    editor.commands.setFontSize(size);
+    // For Tiptap, we need to use CSS styles
+    editor.commands.setMark('textStyle', { fontSize: size });
   };
 
   const setTextColor = (color: string) => {
@@ -317,11 +318,11 @@ const EnhancedToolbar: React.FC = () => {
                   <Input
                     value={mathExpression}
                     onChange={(e) => setMathExpression(e.target.value)}
-                    placeholder="Enter LaTeX expression (e.g., x^2 + y^2 = z^2)"
+                    placeholder="Enter math expression (e.g., x^2 + y^2 = z^2)"
                     className="bg-slate-700 border-slate-600 text-slate-200"
                   />
                   <div className="text-xs text-slate-400">
-                    Examples: x^2, \frac{a}{b}, \sqrt{x}, \sum_{i=1}^{n} x_i
+                    Examples: x^2, a/b, sqrt(x), sum from i=1 to n of x_i
                   </div>
                   <Button onClick={insertMathEquation} className="bg-cyan-600 hover:bg-cyan-700">
                     Insert Equation

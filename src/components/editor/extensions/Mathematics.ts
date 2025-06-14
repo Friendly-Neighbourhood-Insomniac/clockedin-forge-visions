@@ -1,18 +1,14 @@
 
 import { Node } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
 
 export interface MathematicsOptions {
   HTMLAttributes: Record<string, any>;
-  renderMath: (expression: string) => HTMLElement;
 }
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     mathematics: {
       insertMath: (expression: string) => ReturnType;
-      insertInlineMath: (expression: string) => ReturnType;
-      insertBlockMath: (expression: string) => ReturnType;
     };
   }
 }
@@ -23,12 +19,6 @@ export const Mathematics = Node.create<MathematicsOptions>({
   addOptions() {
     return {
       HTMLAttributes: {},
-      renderMath: (expression: string) => {
-        const div = document.createElement('div');
-        div.className = 'math-expression';
-        div.textContent = expression;
-        return div;
-      },
     };
   },
 
@@ -41,9 +31,6 @@ export const Mathematics = Node.create<MathematicsOptions>({
       expression: {
         default: '',
       },
-      display: {
-        default: 'block',
-      },
     };
   },
 
@@ -53,7 +40,6 @@ export const Mathematics = Node.create<MathematicsOptions>({
         tag: 'div[data-math]',
         getAttrs: (element) => ({
           expression: (element as HTMLElement).getAttribute('data-expression'),
-          display: (element as HTMLElement).getAttribute('data-display') || 'block',
         }),
       },
     ];
@@ -65,8 +51,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
       {
         'data-math': true,
         'data-expression': HTMLAttributes.expression,
-        'data-display': HTMLAttributes.display,
-        class: `math-${HTMLAttributes.display}`,
+        class: 'math-expression bg-gray-50 p-2 rounded border font-mono text-center',
         ...this.options.HTMLAttributes,
       },
       HTMLAttributes.expression,
@@ -80,23 +65,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
         ({ commands }) => {
           return commands.insertContent({
             type: this.name,
-            attrs: { expression, display: 'block' },
-          });
-        },
-      insertInlineMath:
-        (expression) =>
-        ({ commands }) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: { expression, display: 'inline' },
-          });
-        },
-      insertBlockMath:
-        (expression) =>
-        ({ commands }) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: { expression, display: 'block' },
+            attrs: { expression },
           });
         },
     };

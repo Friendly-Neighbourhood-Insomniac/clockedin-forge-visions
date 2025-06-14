@@ -16,6 +16,7 @@ import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
+import FontFamily from '@tiptap/extension-font-family';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
 import { useEditorStore } from '@/stores/editorStore';
@@ -48,6 +49,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
       TextStyle,
       Color,
       Underline,
+      FontFamily,
       Highlight.configure({
         multicolor: true,
       }),
@@ -132,7 +134,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
               [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-gray-300 [&_.ProseMirror_td]:p-2
               [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-gray-300 [&_.ProseMirror_th]:p-2 [&_.ProseMirror_th]:bg-gray-100
               [&_.task-list]:list-none [&_.task-item]:flex [&_.task-item]:items-start
-              [&_.math-block]:bg-gray-50 [&_.math-block]:p-2 [&_.math-block]:rounded [&_.math-block]:my-2
+              [&_.math-expression]:bg-gray-50 [&_.math-expression]:p-2 [&_.math-expression]:rounded [&_.math-expression]:my-2
               [&_.resizable-image-wrapper]:relative [&_.resizable-image-wrapper]:inline-block
               [&_.resize-handles]:absolute [&_.resize-handles]:inset-0 [&_.resize-handles]:pointer-events-none
               [&_.resize-handle]:absolute [&_.resize-handle]:w-2 [&_.resize-handle]:h-2 [&_.resize-handle]:bg-blue-500 [&_.resize-handle]:pointer-events-auto
