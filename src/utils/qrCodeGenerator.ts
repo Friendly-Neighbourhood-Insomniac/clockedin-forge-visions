@@ -1,17 +1,24 @@
 
-import QRCode from 'qrcode';
+import QRCodeReact from 'qrcode.react';
+import { renderToString } from 'react-dom/server';
+import React from 'react';
 
 export const generateQRCodeUrl = async (text: string): Promise<string> => {
   try {
-    const qrCodeDataUrl = await QRCode.toDataURL(text, {
-      width: 150,
-      margin: 2,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF',
-      },
+    // Create QR code component
+    const qrCodeElement = React.createElement(QRCodeReact, {
+      value: text,
+      size: 150,
+      level: 'M',
+      includeMargin: true,
     });
-    return qrCodeDataUrl;
+    
+    // Convert to SVG string
+    const svgString = renderToString(qrCodeElement);
+    
+    // Convert SVG to data URL
+    const dataUrl = `data:image/svg+xml;base64,${btoa(svgString)}`;
+    return dataUrl;
   } catch (error) {
     console.error('Error generating QR code:', error);
     return '';
