@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useChapterTreeStore } from '@/stores/chapterTreeStore';
 import { useBookMetadataStore } from '@/stores/bookMetadataStore';
 import { useEditorStore } from '@/stores/editorStore';
@@ -8,8 +7,10 @@ import EditorToolbar from '@/components/editor/EditorToolbar';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, Eye, Download } from 'lucide-react';
+import { Plus, FileText, Eye, Download, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { exportToPDF, exportToEPUB, exportToHTML, downloadFile } from '@/utils/exportUtils';
+import { useToast } from '@/hooks/use-toast';
 
 const Editor: React.FC = () => {
   const {
@@ -24,8 +25,21 @@ const Editor: React.FC = () => {
 
   const { metadata, updateMetadata } = useBookMetadataStore();
   const { loadContent, getContentAsRaw } = useEditorStore();
+  const { toast } = useToast();
+  const [isExporting, setIsExporting] = useState<string | null>(null);
 
   const selectedChapter = selectedChapterId ? getChapterById(selectedChapterId) : null;
+
+  const bookData = {
+    title: metadata.title || 'Untitled Book',
+    author: metadata.author || 'Unknown Author',
+    description: metadata.description || 'No description available',
+    chapters: chapters.map(chapter => ({
+      id: chapter.id,
+      title: chapter.title,
+      content: chapter.content || ''
+    }))
+  };
 
   // Load chapter content when selection changes
   useEffect(() => {
@@ -51,6 +65,59 @@ const Editor: React.FC = () => {
   const handleAddChapter = () => {
     const newChapterId = addChapter();
     selectChapter(newChapterId);
+  };
+
+  const handleExport = async (format: 'pdf' | 'epub' | 'html') => {
+    if (bookData.chapters.length === 0) {
+      toast({
+        title: "No content to export",
+        description: "Please add some chapters before exporting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsExporting(format);
+
+    try {
+      switch (format) {
+        case 'pdf':
+          const pdfBlob = await exportToPDF(bookData);
+          downloadFile(pdfBlob, `${bookData.title.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+          toast({
+            title: "PDF Export Complete",
+            description: "Your book has been exported as a PDF file."
+          });
+          break;
+
+        case 'epub':
+          const epubBlob = await exportToEPUB(bookData);
+          downloadFile(epubBlob, `${bookData.title.replace(/[^a-z0-9]/gi, '_')}.epub`);
+          toast({
+            title: "EPUB Export Complete",
+            description: "Your book has been exported as an EPUB file."
+          });
+          break;
+
+        case 'html':
+          const htmlBlob = await exportToHTML(bookData);
+          downloadFile(htmlBlob, `${bookData.title.replace(/[^a-z0-9]/gi, '_')}.html`);
+          toast({
+            title: "HTML Export Complete",
+            description: "Your book has been exported as an HTML file."
+          });
+          break;
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting your book. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(null);
+    }
   };
 
   return (
@@ -82,10 +149,54 @@ const Editor: React.FC = () => {
                   Preview
                 </Button>
               </Link>
+              
+              {/* Export Buttons */}
+              <Button
+                size="sm"
+                onClick={() => handleExport('pdf')}
+                disabled={isExporting !== null}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isExporting === 'pdf' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                PDF
+              </Button>
+              
+              <Button
+                size="sm"
+                onClick={() => handleExport('epub')}
+                disabled={isExporting !== null}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isExporting === 'epub' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                EPUB
+              </Button>
+              
+              <Button
+                size="sm"
+                onClick={() => handleExport('html')}
+                disabled={isExporting !== null}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isExporting === 'html' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                HTML
+              </Button>
+
               <Link to="/export">
                 <Button size="sm" variant="outline" className="border-cyan-400/30 text-slate-300 hover:text-white hover:bg-slate-700">
                   <Download className="w-4 h-4 mr-2" />
-                  Export
+                  More Options
                 </Button>
               </Link>
             </div>
