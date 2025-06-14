@@ -5,101 +5,78 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { X, Move, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { X, Move, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Maximize2, Minimize2 } from 'lucide-react';
 
 interface MediaEditorProps {
   element: HTMLElement;
   onClose: () => void;
   onUpdate: (element: HTMLElement) => void;
+  position: { x: number; y: number };
 }
 
-const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate }) => {
+const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, position }) => {
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
   const [alignment, setAlignment] = useState('left');
   const [margin, setMargin] = useState('10');
-  const [position, setPosition] = useState('static');
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Initialize values from element's current styles
     const computedStyle = window.getComputedStyle(element);
     
-    // Get actual dimensions
-    const currentWidth = element.style.width || computedStyle.width;
-    const currentHeight = element.style.height || computedStyle.height;
+    setWidth(element.style.width || '300px');
+    setHeight(element.style.height || 'auto');
     
-    setWidth(currentWidth === 'auto' ? '' : currentWidth);
-    setHeight(currentHeight === 'auto' ? '' : currentHeight);
-    
-    // Determine alignment from current styles
+    // Determine alignment
     const float = element.style.float || computedStyle.float;
-    const textAlign = element.style.textAlign || computedStyle.textAlign;
-    const marginLeft = element.style.marginLeft;
-    const marginRight = element.style.marginRight;
-    
     if (float === 'left') setAlignment('left');
     else if (float === 'right') setAlignment('right');
-    else if (marginLeft === 'auto' && marginRight === 'auto') setAlignment('center');
+    else if (element.style.marginLeft === 'auto' && element.style.marginRight === 'auto') setAlignment('center');
     else setAlignment('left');
     
-    // Get margin value
     const currentMargin = element.style.margin?.replace(/px/g, '') || '10';
     setMargin(currentMargin);
-    
-    // Get position
-    setPosition(element.style.position || 'static');
   }, [element]);
 
   const handleUpdate = () => {
-    try {
-      // Clear previous alignment styles
-      element.style.float = '';
-      element.style.marginLeft = '';
-      element.style.marginRight = '';
-      element.style.display = '';
-      
-      // Apply dimensions
-      if (width) {
-        element.style.width = width.includes('px') || width.includes('%') ? width : `${width}px`;
-      }
-      if (height) {
-        element.style.height = height.includes('px') || height.includes('%') ? height : `${height}px`;
-      }
-      
-      // Apply margin
-      const marginValue = margin && !isNaN(Number(margin)) ? `${margin}px` : '10px';
-      element.style.margin = marginValue;
-      
-      // Apply position
-      element.style.position = position;
-      
-      // Apply alignment
-      switch (alignment) {
-        case 'left':
-          element.style.float = 'left';
-          break;
-        case 'right':
-          element.style.float = 'right';
-          break;
-        case 'center':
-          element.style.display = 'block';
-          element.style.marginLeft = 'auto';
-          element.style.marginRight = 'auto';
-          element.style.float = 'none';
-          break;
-      }
-      
-      // Ensure element remains editable
-      element.classList.add('editable-media');
-      
-      onUpdate(element);
-    } catch (error) {
-      console.error('Error updating media element:', error);
+    // Clear previous styles
+    element.style.float = '';
+    element.style.marginLeft = '';
+    element.style.marginRight = '';
+    element.style.display = '';
+    
+    // Apply dimensions
+    if (width) {
+      element.style.width = width.includes('px') || width.includes('%') ? width : `${width}px`;
     }
+    if (height && height !== 'auto') {
+      element.style.height = height.includes('px') || height.includes('%') ? height : `${height}px`;
+    }
+    
+    // Apply margin
+    const marginValue = margin && !isNaN(Number(margin)) ? `${margin}px` : '10px';
+    element.style.margin = marginValue;
+    
+    // Apply alignment
+    switch (alignment) {
+      case 'left':
+        element.style.float = 'left';
+        break;
+      case 'right':
+        element.style.float = 'right';
+        break;
+      case 'center':
+        element.style.display = 'block';
+        element.style.marginLeft = 'auto';
+        element.style.marginRight = 'auto';
+        break;
+    }
+    
+    onUpdate(element);
   };
 
   const handleReset = () => {
-    // Reset all styles to defaults
     element.style.width = '';
     element.style.height = '';
     element.style.margin = '';
@@ -107,11 +84,6 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate })
     element.style.display = '';
     element.style.marginLeft = '';
     element.style.marginRight = '';
-    element.style.position = '';
-    element.style.top = '';
-    element.style.left = '';
-    element.style.right = '';
-    element.style.bottom = '';
     
     onUpdate(element);
     onClose();
@@ -139,27 +111,72 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate })
     onUpdate(element);
   };
 
+  const quickResize = (size: 'small' | 'medium' | 'large') => {
+    const sizes = {
+      small: { width: '200px', height: 'auto' },
+      medium: { width: '400px', height: 'auto' },
+      large: { width: '600px', height: 'auto' }
+    };
+    
+    const { width: newWidth, height: newHeight } = sizes[size];
+    setWidth(newWidth);
+    setHeight(newHeight);
+    
+    element.style.width = newWidth;
+    element.style.height = newHeight;
+    onUpdate(element);
+  };
+
   return (
-    <Card className="absolute z-50 bg-slate-800 border-cyan-400/30 shadow-xl" style={{ minWidth: '320px' }}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-cyan-100 flex items-center justify-between text-sm">
-          <span className="flex items-center gap-2">
+    <div
+      ref={cardRef}
+      className="fixed z-[9999] bg-slate-800 border border-cyan-400/30 shadow-2xl rounded-lg"
+      style={{ 
+        left: position.x, 
+        top: position.y,
+        minWidth: '320px',
+        maxWidth: '400px'
+      }}
+    >
+      <div className="p-3 border-b border-slate-700">
+        <div className="flex items-center justify-between">
+          <span className="text-cyan-100 font-medium text-sm flex items-center gap-2">
             <Move className="w-4 h-4" />
             Edit Media
           </span>
-          <Button onClick={onClose} size="sm" variant="ghost" className="text-slate-400">
+          <Button onClick={onClose} size="sm" variant="ghost" className="text-slate-400 h-6 w-6 p-0">
             <X className="w-4 h-4" />
           </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </div>
+      </div>
+      
+      <div className="p-4 space-y-4">
+        {/* Quick Resize */}
+        <div>
+          <Label className="text-slate-300 text-xs mb-2 block">Quick Resize</Label>
+          <div className="flex gap-2">
+            <Button onClick={() => quickResize('small')} size="sm" variant="outline" className="text-xs">
+              <Minimize2 className="w-3 h-3 mr-1" />
+              Small
+            </Button>
+            <Button onClick={() => quickResize('medium')} size="sm" variant="outline" className="text-xs">
+              Medium
+            </Button>
+            <Button onClick={() => quickResize('large')} size="sm" variant="outline" className="text-xs">
+              <Maximize2 className="w-3 h-3 mr-1" />
+              Large
+            </Button>
+          </div>
+        </div>
+
+        {/* Dimensions */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label className="text-slate-300 text-xs">Width</Label>
             <Input
               value={width}
               onChange={(e) => setWidth(e.target.value)}
-              placeholder="300px or 50%"
+              placeholder="300px"
               className="bg-slate-700 border-slate-600 text-slate-100 h-8"
             />
           </div>
@@ -168,12 +185,13 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate })
             <Input
               value={height}
               onChange={(e) => setHeight(e.target.value)}
-              placeholder="200px or auto"
+              placeholder="auto"
               className="bg-slate-700 border-slate-600 text-slate-100 h-8"
             />
           </div>
         </div>
         
+        {/* Alignment */}
         <div>
           <Label className="text-slate-300 text-xs">Alignment</Label>
           <Select value={alignment} onValueChange={setAlignment}>
@@ -188,20 +206,7 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate })
           </Select>
         </div>
 
-        <div>
-          <Label className="text-slate-300 text-xs">Position</Label>
-          <Select value={position} onValueChange={setPosition}>
-            <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-slate-700 border-slate-600">
-              <SelectItem value="static" className="text-slate-200">Static</SelectItem>
-              <SelectItem value="relative" className="text-slate-200">Relative</SelectItem>
-              <SelectItem value="absolute" className="text-slate-200">Absolute</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
+        {/* Margin */}
         <div>
           <Label className="text-slate-300 text-xs">Margin (px)</Label>
           <Input
@@ -212,59 +217,41 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate })
           />
         </div>
 
+        {/* Movement Controls */}
         <div>
-          <Label className="text-slate-300 text-xs mb-2 block">Move Element</Label>
+          <Label className="text-slate-300 text-xs mb-2 block">Fine Positioning</Label>
           <div className="grid grid-cols-3 gap-1">
             <div></div>
-            <Button
-              onClick={() => moveElement('up')}
-              size="sm"
-              variant="ghost"
-              className="text-slate-300 h-8 p-1"
-            >
+            <Button onClick={() => moveElement('up')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
               <ArrowUp className="w-4 h-4" />
             </Button>
             <div></div>
-            <Button
-              onClick={() => moveElement('left')}
-              size="sm"
-              variant="ghost"
-              className="text-slate-300 h-8 p-1"
-            >
+            <Button onClick={() => moveElement('left')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div></div>
-            <Button
-              onClick={() => moveElement('right')}
-              size="sm"
-              variant="ghost"
-              className="text-slate-300 h-8 p-1"
-            >
+            <Button onClick={() => moveElement('right')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
               <ArrowRight className="w-4 h-4" />
             </Button>
             <div></div>
-            <Button
-              onClick={() => moveElement('down')}
-              size="sm"
-              variant="ghost"
-              className="text-slate-300 h-8 p-1"
-            >
+            <Button onClick={() => moveElement('down')} size="sm" variant="ghost" className="text-slate-300 h-8 p-1">
               <ArrowDown className="w-4 h-4" />
             </Button>
             <div></div>
           </div>
         </div>
 
+        {/* Action Buttons */}
         <div className="flex gap-2 pt-2">
           <Button onClick={handleUpdate} size="sm" className="bg-cyan-600 hover:bg-cyan-700 flex-1">
-            Apply Changes
+            Apply
           </Button>
           <Button onClick={handleReset} size="sm" variant="ghost" className="text-slate-300">
             <RotateCcw className="w-4 h-4" />
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

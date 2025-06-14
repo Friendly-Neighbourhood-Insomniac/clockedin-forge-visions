@@ -149,20 +149,21 @@ const BookEditor = () => {
         cursor: pointer; 
         border: 2px solid transparent;
         transition: all 0.2s ease;
-        ${metadata?.width ? `width: ${metadata.width};` : ''}
+        ${metadata?.width ? `width: ${metadata.width};` : 'width: 300px;'}
         ${metadata?.height ? `height: ${metadata.height};` : ''}
       " 
       class="editable-media"
       data-media-type="image"
+      draggable="true"
     />`;
     
     document.execCommand('insertHTML', false, img);
     syncEditorContent();
     
     // Setup event listeners for the new image
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       setupMediaEventListeners();
-    });
+    }, 100);
   };
 
   const handleEmbedInsert = (embedData: { url: string; title: string; type: 'video' | 'website' }) => {
@@ -172,6 +173,7 @@ const BookEditor = () => {
            data-title="${embedData.title}" 
            data-type="${embedData.type}" 
            data-media-type="embed"
+           draggable="true"
            style="
              margin: 20px 0; 
              padding: 15px; 
@@ -182,6 +184,7 @@ const BookEditor = () => {
              transition: all 0.2s ease;
              position: relative;
              max-width: 100%;
+             width: 400px;
            "
       >
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -192,6 +195,9 @@ const BookEditor = () => {
           <p style="margin: 0; font-size: 14px;">📺 ${embedData.type === 'video' ? 'Video' : 'Website'} Embed</p>
           <p style="margin: 5px 0 0 0; font-size: 12px;">${embedData.url}</p>
         </div>
+        <div style="position: absolute; top: 5px; right: 5px; background: rgba(6, 182, 212, 0.1); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: #0891b2;">
+          DRAG TO MOVE
+        </div>
       </div>
     `;
     
@@ -199,35 +205,31 @@ const BookEditor = () => {
     syncEditorContent();
     
     // Setup event listeners for the new embed
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       setupMediaEventListeners();
-    });
+    }, 100);
   };
 
   const setupMediaEventListeners = () => {
     if (!editorRef.current) return;
     
-    // Remove existing listeners to prevent duplicates
     const mediaElements = editorRef.current.querySelectorAll('.editable-media');
     
     mediaElements.forEach((element) => {
       const mediaElement = element as HTMLElement;
       
-      // Remove existing event listeners
+      // Remove existing listeners by cloning
       const newElement = mediaElement.cloneNode(true) as HTMLElement;
       mediaElement.parentNode?.replaceChild(newElement, mediaElement);
       
-      // Add fresh event listeners
+      // Double-click to edit
       newElement.addEventListener('dblclick', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
         const rect = newElement.getBoundingClientRect();
-        const editorRect = editorRef.current!.getBoundingClientRect();
-        
-        // Calculate position relative to the editor container
-        const x = Math.min(rect.right - editorRect.left + 10, window.innerWidth - 350);
-        const y = Math.max(10, rect.top - editorRect.top);
+        const x = Math.min(rect.right + 10, window.innerWidth - 350);
+        const y = Math.max(10, rect.top);
         
         setMediaEditor({
           element: newElement,
@@ -235,34 +237,73 @@ const BookEditor = () => {
         });
       });
 
-      // Visual feedback on hover
+      // Hover effects
       newElement.addEventListener('mouseenter', () => {
-        newElement.style.border = '2px solid rgb(6, 182, 212)';
-        newElement.style.transform = 'scale(1.02)';
-        newElement.style.boxShadow = '0 4px 12px rgba(6, 182, 212, 0.3)';
+        newElement.style.border = '2px dashed rgb(6, 182, 212)';
+        newElement.style.transform = 'scale(1.01)';
+        newElement.style.boxShadow = '0 4px 12px rgba(6, 182, 212, 0.2)';
+        
+        // Show drag indicator
+        if (!newElement.querySelector('.drag-indicator')) {
+          const indicator = document.createElement('div');
+          indicator.className = 'drag-indicator';
+          indicator.style.cssText = `
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgb(6, 182, 212);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            z-index: 10;
+            pointer-events: none;
+          `;
+          indicator.textContent = 'DRAG TO MOVE • DOUBLE-CLICK TO EDIT';
+          newElement.style.position = 'relative';
+          newElement.appendChild(indicator);
+        }
       });
 
       newElement.addEventListener('mouseleave', () => {
         newElement.style.border = '2px solid transparent';
         newElement.style.transform = 'scale(1)';
         newElement.style.boxShadow = 'none';
+        
+        // Remove drag indicator
+        const indicator = newElement.querySelector('.drag-indicator');
+        if (indicator) {
+          indicator.remove();
+        }
       });
 
-      // Make draggable
-      newElement.draggable = true;
-      
+      // Drag and drop
       newElement.addEventListener('dragstart', (e) => {
         e.dataTransfer!.effectAllowed = 'move';
         e.dataTransfer!.setData('text/html', newElement.outerHTML);
         newElement.style.opacity = '0.5';
+        
+        // Add visual feedback to editor
+        if (editorRef.current) {
+          editorRef.current.style.background = 'rgba(6, 182, 212, 0.05)';
+          editorRef.current.style.border = '2px dashed rgb(6, 182, 212)';
+        }
       });
 
       newElement.addEventListener('dragend', () => {
         newElement.style.opacity = '1';
+        
+        // Remove visual feedback
+        if (editorRef.current) {
+          editorRef.current.style.background = '';
+          editorRef.current.style.border = '';
+        }
       });
     });
 
-    // Setup drop zone for the editor
+    // Setup drop zone
     if (editorRef.current) {
       editorRef.current.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -272,7 +313,14 @@ const BookEditor = () => {
       editorRef.current.addEventListener('drop', (e) => {
         e.preventDefault();
         const htmlData = e.dataTransfer!.getData('text/html');
+        
         if (htmlData) {
+          // Remove the original element to prevent duplication
+          const draggedElement = editorRef.current!.querySelector('.editable-media[style*="opacity: 0.5"]');
+          if (draggedElement) {
+            draggedElement.remove();
+          }
+          
           // Insert at drop position
           const range = document.caretRangeFromPoint(e.clientX, e.clientY);
           if (range) {
@@ -281,15 +329,22 @@ const BookEditor = () => {
             const element = tempDiv.firstChild as HTMLElement;
             
             if (element) {
+              element.style.opacity = '1';
               range.insertNode(element);
               syncEditorContent();
               
-              // Re-setup listeners for the moved element
-              requestAnimationFrame(() => {
+              // Re-setup listeners
+              setTimeout(() => {
                 setupMediaEventListeners();
-              });
+              }, 100);
             }
           }
+        }
+        
+        // Remove visual feedback
+        if (editorRef.current) {
+          editorRef.current.style.background = '';
+          editorRef.current.style.border = '';
         }
       });
     }
@@ -299,15 +354,12 @@ const BookEditor = () => {
     syncEditorContent();
   };
 
-  // Setup media event listeners when chapter changes or content updates
+  // Setup media event listeners when chapter changes
   useEffect(() => {
     if (currentChapter && editorRef.current) {
-      // Use a longer delay to ensure DOM is updated
-      const timeoutId = setTimeout(() => {
+      setTimeout(() => {
         setupMediaEventListeners();
-      }, 200);
-      
-      return () => clearTimeout(timeoutId);
+      }, 300);
     }
   }, [selectedChapter, currentChapter?.content]);
 
@@ -610,27 +662,9 @@ const BookEditor = () => {
                     {!currentChapter && (
                       <div className="text-center text-slate-400 py-20">
                         <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                        <p>Select a chapter to start writing</p>
-                        <p className="text-sm mt-2">📷 Upload images and 🎥 embed videos</p>
-                        <p className="text-sm">Double-click media to edit • Drag to reposition</p>
-                      </div>
-                    )}
-                    
-                    {/* Media Editor */}
-                    {mediaEditor && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: mediaEditor.position.x,
-                          top: mediaEditor.position.y,
-                          zIndex: 1000
-                        }}
-                      >
-                        <MediaEditor
-                          element={mediaEditor.element}
-                          onClose={() => setMediaEditor(null)}
-                          onUpdate={handleMediaUpdate}
-                        />
+                        <p className="text-lg mb-2">Select a chapter to start writing</p>
+                        <p className="text-sm">📷 Upload images • 🎥 Embed videos • 🖱️ Drag to reposition</p>
+                        <p className="text-sm mt-1">Double-click media to edit size and alignment</p>
                       </div>
                     )}
                   </CardContent>
@@ -652,6 +686,16 @@ const BookEditor = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Media Editor */}
+      {mediaEditor && (
+        <MediaEditor
+          element={mediaEditor.element}
+          position={mediaEditor.position}
+          onClose={() => setMediaEditor(null)}
+          onUpdate={handleMediaUpdate}
+        />
+      )}
 
       {/* Flipbook Preview Modal */}
       <FlipbookPreview
