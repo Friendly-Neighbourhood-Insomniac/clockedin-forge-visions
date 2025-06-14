@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,8 +64,16 @@ const TextEditor: React.FC<TextEditorProps> = ({
     // Focus the editor first
     editorRef.current.focus();
     
-    // Create the image HTML with enhanced styling
-    const imageHtml = `<img src="${imageUrl}" alt="${metadata?.alt || 'Uploaded image'}" style="max-width: 100%; height: auto; margin: 10px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s ease; width: ${metadata?.width || '300px'}; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" class="editable-media" data-media-type="image" draggable="true" />`;
+    // Create the image HTML with enhanced styling and resize handles
+    const imageHtml = `<div class="editable-media-container" data-media-type="image" style="position: relative; display: inline-block; margin: 10px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s ease; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" draggable="true">
+      <img src="${imageUrl}" alt="${metadata?.alt || 'Uploaded image'}" style="max-width: 100%; height: auto; width: ${metadata?.width || '300px'}; border-radius: 4px; display: block;" class="editable-media" data-media-type="image" />
+      <div class="resize-handles" style="display: none;">
+        <div class="resize-handle nw" style="position: absolute; top: -4px; left: -4px; width: 8px; height: 8px; background: rgb(6, 182, 212); border: 1px solid white; cursor: nw-resize; z-index: 1001;"></div>
+        <div class="resize-handle ne" style="position: absolute; top: -4px; right: -4px; width: 8px; height: 8px; background: rgb(6, 182, 212); border: 1px solid white; cursor: ne-resize; z-index: 1001;"></div>
+        <div class="resize-handle sw" style="position: absolute; bottom: -4px; left: -4px; width: 8px; height: 8px; background: rgb(6, 182, 212); border: 1px solid white; cursor: sw-resize; z-index: 1001;"></div>
+        <div class="resize-handle se" style="position: absolute; bottom: -4px; right: -4px; width: 8px; height: 8px; background: rgb(6, 182, 212); border: 1px solid white; cursor: se-resize; z-index: 1001;"></div>
+      </div>
+    </div>`;
     
     // Insert the image
     document.execCommand('insertHTML', false, imageHtml);
@@ -76,6 +85,26 @@ const TextEditor: React.FC<TextEditorProps> = ({
     }, 100);
   };
 
+  const getEmbedUrl = (url: string, type: 'video' | 'website'): string => {
+    if (type === 'video') {
+      // Convert YouTube URLs to embed format
+      if (url.includes('youtube.com/watch?v=')) {
+        const videoId = url.split('v=')[1]?.split('&')[0];
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+      if (url.includes('youtu.be/')) {
+        const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+      // Convert Vimeo URLs to embed format
+      if (url.includes('vimeo.com/')) {
+        const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+        return `https://player.vimeo.com/video/${videoId}`;
+      }
+    }
+    return url;
+  };
+
   const handleEmbedInsert = (embedData: { url: string; title: string; type: 'video' | 'website' }) => {
     if (!editorRef.current) return;
     
@@ -84,7 +113,23 @@ const TextEditor: React.FC<TextEditorProps> = ({
     // Focus the editor first
     editorRef.current.focus();
     
-    const embedHtml = `<div class="embed-container editable-media" data-url="${embedData.url}" data-title="${embedData.title}" data-type="${embedData.type}" data-media-type="embed" draggable="true" style="margin: 20px 0; padding: 15px; border: 2px solid transparent; border-radius: 8px; background: #f8fafc; cursor: pointer; transition: all 0.2s ease; position: relative; max-width: 100%; width: 400px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><h4 style="margin: 0; color: #334155; flex: 1; font-size: 16px;">${embedData.title}</h4><span style="font-size: 10px; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">DOUBLE-CLICK TO EDIT</span></div><div style="background: #e2e8f0; padding: 40px; text-align: center; border-radius: 4px; color: #64748b;"><p style="margin: 0; font-size: 14px;">📺 ${embedData.type === 'video' ? 'Video' : 'Website'} Embed</p><p style="margin: 5px 0 0 0; font-size: 12px;">${embedData.url}</p></div><div style="position: absolute; top: 5px; right: 5px; background: rgba(6, 182, 212, 0.1); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: #0891b2;">DRAG TO MOVE</div></div>`;
+    const embedUrl = getEmbedUrl(embedData.url, embedData.type);
+    
+    const embedHtml = `<div class="editable-media-container" data-media-type="embed" data-url="${embedData.url}" data-title="${embedData.title}" data-type="${embedData.type}" style="position: relative; display: inline-block; margin: 20px 0; padding: 0; border: 2px solid transparent; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; width: 560px; max-width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" draggable="true">
+      <div class="embed-header" style="background: #f8fafc; padding: 10px 15px; border-radius: 8px 8px 0 0; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+        <h4 style="margin: 0; color: #334155; font-size: 14px; font-weight: 600;">${embedData.title}</h4>
+        <span style="font-size: 10px; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${embedData.type.toUpperCase()}</span>
+      </div>
+      <div class="embed-content editable-media" data-media-type="embed" style="position: relative; width: 100%; height: 315px; background: #000; border-radius: 0 0 8px 8px; overflow: hidden;">
+        <iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allowfullscreen style="border: none; border-radius: 0 0 8px 8px;"></iframe>
+      </div>
+      <div class="resize-handles" style="display: none;">
+        <div class="resize-handle nw" style="position: absolute; top: -4px; left: -4px; width: 8px; height: 8px; background: rgb(6, 182, 212); border: 1px solid white; cursor: nw-resize; z-index: 1001;"></div>
+        <div class="resize-handle ne" style="position: absolute; top: -4px; right: -4px; width: 8px; height: 8px; background: rgb(6, 182, 212); border: 1px solid white; cursor: ne-resize; z-index: 1001;"></div>
+        <div class="resize-handle sw" style="position: absolute; bottom: -4px; left: -4px; width: 8px; height: 8px; background: rgb(6, 182, 212); border: 1px solid white; cursor: sw-resize; z-index: 1001;"></div>
+        <div class="resize-handle se" style="position: absolute; bottom: -4px; right: -4px; width: 8px; height: 8px; background: rgb(6, 182, 212); border: 1px solid white; cursor: se-resize; z-index: 1001;"></div>
+      </div>
+    </div>`;
     
     // Insert the embed
     document.execCommand('insertHTML', false, embedHtml);

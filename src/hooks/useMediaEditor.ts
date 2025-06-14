@@ -16,60 +16,69 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
   const setupMediaEventListeners = useCallback(() => {
     if (!editorRef.current) return;
     
-    const mediaElements = editorRef.current.querySelectorAll('.editable-media');
+    const mediaContainers = editorRef.current.querySelectorAll('.editable-media-container');
     
-    mediaElements.forEach((element) => {
-      const mediaElement = element as HTMLElement;
+    mediaContainers.forEach((container) => {
+      const mediaContainer = container as HTMLElement;
       
       // Remove existing listeners by cloning
-      const newElement = mediaElement.cloneNode(true) as HTMLElement;
-      mediaElement.parentNode?.replaceChild(newElement, mediaElement);
+      const newContainer = mediaContainer.cloneNode(true) as HTMLElement;
+      mediaContainer.parentNode?.replaceChild(newContainer, mediaContainer);
       
-      // Single-click to select with enhanced visual feedback
-      newElement.addEventListener('click', (e) => {
+      const mediaElement = newContainer.querySelector('.editable-media') as HTMLElement;
+      if (!mediaElement) return;
+
+      // Enhanced selection with visual feedback
+      newContainer.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
         // Remove previous selections
-        editorRef.current?.querySelectorAll('.editable-media').forEach(el => {
+        editorRef.current?.querySelectorAll('.editable-media-container').forEach(el => {
           (el as HTMLElement).style.outline = 'none';
           (el as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
           (el as HTMLElement).classList.remove('media-selected');
+          const handles = (el as HTMLElement).querySelector('.resize-handles') as HTMLElement;
+          if (handles) handles.style.display = 'none';
         });
         
-        // Select current element with enhanced styling
-        newElement.style.outline = '3px solid rgb(6, 182, 212)';
-        newElement.style.boxShadow = '0 0 20px rgba(6, 182, 212, 0.5)';
-        newElement.classList.add('media-selected');
+        // Select current element
+        newContainer.style.outline = '3px solid rgb(6, 182, 212)';
+        newContainer.style.boxShadow = '0 0 20px rgba(6, 182, 212, 0.5)';
+        newContainer.classList.add('media-selected');
         
-        // Add corner resize handles
-        addResizeHandles(newElement);
+        // Show resize handles
+        const handles = newContainer.querySelector('.resize-handles') as HTMLElement;
+        if (handles) {
+          handles.style.display = 'block';
+          setupResizeHandles(newContainer, handles);
+        }
       });
 
       // Double-click to edit
-      newElement.addEventListener('dblclick', (e) => {
+      newContainer.addEventListener('dblclick', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        const rect = newElement.getBoundingClientRect();
+        const rect = newContainer.getBoundingClientRect();
         const x = Math.min(rect.right + 10, window.innerWidth - 450);
         const y = Math.max(10, rect.top);
         
         onMediaEditorOpen({
-          element: newElement,
+          element: newContainer,
           position: { x, y }
         });
       });
 
-      // Enhanced hover effects with better visual feedback
-      newElement.addEventListener('mouseenter', () => {
-        if (!newElement.classList.contains('media-selected')) {
-          newElement.style.border = '2px dashed rgba(6, 182, 212, 0.6)';
+      // Enhanced hover effects
+      newContainer.addEventListener('mouseenter', () => {
+        if (!newContainer.classList.contains('media-selected')) {
+          newContainer.style.border = '2px dashed rgba(6, 182, 212, 0.6)';
         }
-        newElement.style.cursor = 'pointer';
+        newContainer.style.cursor = 'pointer';
         
-        // Show enhanced tooltip
-        if (!newElement.querySelector('.quick-actions')) {
+        // Show tooltip
+        if (!newContainer.querySelector('.quick-actions')) {
           const tooltip = document.createElement('div');
           tooltip.className = 'quick-actions';
           tooltip.style.cssText = `
@@ -89,27 +98,26 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
             white-space: nowrap;
           `;
           tooltip.innerHTML = '👆 CLICK TO SELECT • 🎯 DOUBLE-CLICK TO EDIT • 🖱️ DRAG TO MOVE';
-          newElement.style.position = 'relative';
-          newElement.appendChild(tooltip);
+          newContainer.appendChild(tooltip);
         }
       });
 
-      newElement.addEventListener('mouseleave', () => {
-        if (!newElement.classList.contains('media-selected')) {
-          newElement.style.border = '2px solid transparent';
+      newContainer.addEventListener('mouseleave', () => {
+        if (!newContainer.classList.contains('media-selected')) {
+          newContainer.style.border = '2px solid transparent';
         }
-        newElement.style.cursor = 'default';
+        newContainer.style.cursor = 'default';
         
         // Remove tooltip
-        const tooltip = newElement.querySelector('.quick-actions');
+        const tooltip = newContainer.querySelector('.quick-actions');
         if (tooltip) {
           tooltip.remove();
         }
       });
 
-      // Enhanced keyboard shortcuts for selected elements
-      newElement.addEventListener('keydown', (e) => {
-        if (newElement.classList.contains('media-selected')) {
+      // Keyboard shortcuts for selected elements
+      newContainer.addEventListener('keydown', (e) => {
+        if (newContainer.classList.contains('media-selected')) {
           e.preventDefault();
           const step = e.shiftKey ? 20 : 5;
           const scaleStep = e.shiftKey ? 0.2 : 0.1;
@@ -118,42 +126,42 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
             case 'Delete':
             case 'Backspace':
               if (confirm('Delete this element?')) {
-                newElement.remove();
+                newContainer.remove();
                 onContentSync();
               }
               break;
             case 'ArrowUp':
-              const currentTop = parseInt(newElement.style.marginTop) || 0;
-              newElement.style.marginTop = `${Math.max(0, currentTop - step)}px`;
+              const currentTop = parseInt(newContainer.style.marginTop) || 0;
+              newContainer.style.marginTop = `${Math.max(0, currentTop - step)}px`;
               onContentSync();
               break;
             case 'ArrowDown':
-              const currentBottom = parseInt(newElement.style.marginTop) || 0;
-              newElement.style.marginTop = `${currentBottom + step}px`;
+              const currentBottom = parseInt(newContainer.style.marginTop) || 0;
+              newContainer.style.marginTop = `${currentBottom + step}px`;
               onContentSync();
               break;
             case 'ArrowLeft':
-              const currentLeft = parseInt(newElement.style.marginLeft) || 0;
-              newElement.style.marginLeft = `${Math.max(0, currentLeft - step)}px`;
+              const currentLeft = parseInt(newContainer.style.marginLeft) || 0;
+              newContainer.style.marginLeft = `${Math.max(0, currentLeft - step)}px`;
               onContentSync();
               break;
             case 'ArrowRight':
-              const currentRight = parseInt(newElement.style.marginLeft) || 0;
-              newElement.style.marginLeft = `${currentRight + step}px`;
+              const currentRight = parseInt(newContainer.style.marginLeft) || 0;
+              newContainer.style.marginLeft = `${currentRight + step}px`;
               onContentSync();
               break;
             case '=':
             case '+':
-              scaleElement(newElement, 1 + scaleStep);
+              scaleElement(newContainer, 1 + scaleStep);
               onContentSync();
               break;
             case '-':
-              scaleElement(newElement, 1 - scaleStep);
+              scaleElement(newContainer, 1 - scaleStep);
               onContentSync();
               break;
             case 'c':
               if (e.ctrlKey || e.metaKey) {
-                duplicateElement(newElement);
+                duplicateElement(newContainer);
                 onContentSync();
               }
               break;
@@ -162,103 +170,31 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
       });
 
       // Make element focusable for keyboard navigation
-      newElement.setAttribute('tabindex', '0');
+      newContainer.setAttribute('tabindex', '0');
 
-      // Enhanced drag and drop with grid snapping
-      newElement.addEventListener('dragstart', (e) => {
+      // Enhanced drag and drop
+      newContainer.addEventListener('dragstart', (e) => {
         e.dataTransfer!.effectAllowed = 'move';
-        e.dataTransfer!.setData('text/html', newElement.outerHTML);
-        newElement.style.opacity = '0.4';
-        newElement.style.transform = 'rotate(2deg) scale(0.95)';
+        e.dataTransfer!.setData('text/html', newContainer.outerHTML);
+        newContainer.style.opacity = '0.4';
+        newContainer.style.transform = 'rotate(2deg) scale(0.95)';
         
         // Store snap to grid preference
         const snapToGrid = localStorage.getItem('editor-snap-to-grid') === 'true';
         e.dataTransfer!.setData('text/plain', snapToGrid ? 'snap' : 'free');
-        
-        // Enhanced visual feedback for drop zone
-        if (editorRef.current) {
-          editorRef.current.style.background = `
-            linear-gradient(45deg, rgba(6, 182, 212, 0.1) 25%, transparent 25%, transparent 75%, rgba(6, 182, 212, 0.1) 75%),
-            linear-gradient(45deg, rgba(6, 182, 212, 0.1) 25%, transparent 25%, transparent 75%, rgba(6, 182, 212, 0.1) 75%)
-          `;
-          editorRef.current.style.backgroundSize = '20px 20px';
-          editorRef.current.style.backgroundPosition = '0 0, 10px 10px';
-          editorRef.current.style.border = '3px dashed rgb(6, 182, 212)';
-          editorRef.current.style.borderRadius = '8px';
-        }
       });
 
-      newElement.addEventListener('dragend', () => {
-        newElement.style.opacity = '1';
-        newElement.style.transform = '';
-        
-        // Remove visual feedback
-        if (editorRef.current) {
-          editorRef.current.style.background = '';
-          editorRef.current.style.backgroundSize = '';
-          editorRef.current.style.backgroundPosition = '';
-          editorRef.current.style.border = '';
-          editorRef.current.style.borderRadius = '';
-        }
+      newContainer.addEventListener('dragend', () => {
+        newContainer.style.opacity = '1';
+        newContainer.style.transform = '';
       });
     });
 
-    // Enhanced drop zone with grid snapping
+    // Enhanced drop zone
     if (editorRef.current) {
       const handleDragOver = (e: DragEvent) => {
         e.preventDefault();
         e.dataTransfer!.dropEffect = 'move';
-        
-        // Enhanced drop indicator with grid snapping preview
-        const dropIndicator = document.getElementById('drop-indicator');
-        const snapMode = e.dataTransfer!.getData('text/plain') === 'snap';
-        
-        let clientX = e.clientX;
-        let clientY = e.clientY;
-        
-        if (snapMode) {
-          clientX = Math.round(clientX / 20) * 20;
-          clientY = Math.round(clientY / 20) * 20;
-        }
-        
-        if (dropIndicator) {
-          dropIndicator.style.display = 'block';
-          dropIndicator.style.left = `${clientX - 15}px`;
-          dropIndicator.style.top = `${clientY - 15}px`;
-          dropIndicator.style.background = snapMode ? 'rgb(34, 197, 94)' : 'rgb(6, 182, 212)';
-          dropIndicator.innerHTML = snapMode ? '📐' : '📍';
-        } else {
-          const indicator = document.createElement('div');
-          indicator.id = 'drop-indicator';
-          indicator.style.cssText = `
-            position: fixed;
-            width: 30px;
-            height: 30px;
-            background: ${snapMode ? 'rgb(34, 197, 94)' : 'rgb(6, 182, 212)'};
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 10000;
-            opacity: 0.8;
-            left: ${clientX - 15}px;
-            top: ${clientY - 15}px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
-          `;
-          indicator.innerHTML = snapMode ? '📐' : '📍';
-          document.body.appendChild(indicator);
-        }
-      };
-
-      const handleDragLeave = () => {
-        const dropIndicator = document.getElementById('drop-indicator');
-        if (dropIndicator) {
-          dropIndicator.style.display = 'none';
-        }
       };
 
       const handleDrop = (e: DragEvent) => {
@@ -266,15 +202,9 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
         const htmlData = e.dataTransfer!.getData('text/html');
         const snapMode = e.dataTransfer!.getData('text/plain') === 'snap';
         
-        // Remove drop indicator
-        const dropIndicator = document.getElementById('drop-indicator');
-        if (dropIndicator) {
-          dropIndicator.remove();
-        }
-        
         if (htmlData) {
           // Remove the original element
-          const draggedElement = editorRef.current!.querySelector('.editable-media[style*="opacity: 0.4"]');
+          const draggedElement = editorRef.current!.querySelector('.editable-media-container[style*="opacity: 0.4"]');
           if (draggedElement) {
             draggedElement.remove();
           }
@@ -299,16 +229,7 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
               element.style.opacity = '1';
               element.style.transform = '';
               
-              // Smooth drop animation
-              element.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
-              element.style.transform = 'scale(0.8) rotate(-2deg)';
-              
               range.insertNode(element);
-              
-              setTimeout(() => {
-                element.style.transform = 'scale(1) rotate(0deg)';
-              }, 50);
-              
               onContentSync();
               
               // Re-setup listeners
@@ -318,30 +239,21 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
             }
           }
         }
-        
-        // Remove visual feedback
-        if (editorRef.current) {
-          editorRef.current.style.background = '';
-          editorRef.current.style.backgroundSize = '';
-          editorRef.current.style.backgroundPosition = '';
-          editorRef.current.style.border = '';
-          editorRef.current.style.borderRadius = '';
-        }
       };
 
       editorRef.current.addEventListener('dragover', handleDragOver);
-      editorRef.current.addEventListener('dragleave', handleDragLeave);
       editorRef.current.addEventListener('drop', handleDrop);
     }
 
     // Global click handler to deselect elements
     const handleGlobalClick = (e: Event) => {
       if (!editorRef.current?.contains(e.target as Node)) {
-        editorRef.current?.querySelectorAll('.editable-media').forEach(el => {
+        editorRef.current?.querySelectorAll('.editable-media-container').forEach(el => {
           (el as HTMLElement).style.outline = 'none';
           (el as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
           (el as HTMLElement).classList.remove('media-selected');
-          removeResizeHandles(el as HTMLElement);
+          const handles = (el as HTMLElement).querySelector('.resize-handles') as HTMLElement;
+          if (handles) handles.style.display = 'none';
         });
       }
     };
@@ -358,62 +270,104 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
 };
 
 // Helper functions for enhanced functionality
-function addResizeHandles(element: HTMLElement) {
-  // Remove existing handles
-  removeResizeHandles(element);
+function setupResizeHandles(container: HTMLElement, handlesContainer: HTMLElement) {
+  const handles = handlesContainer.querySelectorAll('.resize-handle');
   
-  const handles = ['nw', 'ne', 'sw', 'se'];
-  handles.forEach(handle => {
-    const resizeHandle = document.createElement('div');
-    resizeHandle.className = `resize-handle resize-${handle}`;
-    resizeHandle.style.cssText = `
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      background: rgb(6, 182, 212);
-      border: 1px solid white;
-      cursor: ${handle}-resize;
-      z-index: 1001;
-      ${getHandlePosition(handle)}
-    `;
+  handles.forEach((handle) => {
+    const handleElement = handle as HTMLElement;
+    let isResizing = false;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
     
-    element.style.position = 'relative';
-    element.appendChild(resizeHandle);
+    handleElement.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      isResizing = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      
+      const mediaElement = container.querySelector('img, .embed-content') as HTMLElement;
+      if (mediaElement) {
+        const rect = mediaElement.getBoundingClientRect();
+        startWidth = rect.width;
+        startHeight = rect.height;
+      }
+      
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    });
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      
+      const mediaElement = container.querySelector('img, .embed-content') as HTMLElement;
+      if (mediaElement) {
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+        
+        if (handleElement.classList.contains('se') || handleElement.classList.contains('ne')) {
+          newWidth = Math.max(50, startWidth + deltaX);
+        } else if (handleElement.classList.contains('sw') || handleElement.classList.contains('nw')) {
+          newWidth = Math.max(50, startWidth - deltaX);
+        }
+        
+        if (handleElement.classList.contains('se') || handleElement.classList.contains('sw')) {
+          newHeight = Math.max(50, startHeight + deltaY);
+        } else if (handleElement.classList.contains('ne') || handleElement.classList.contains('nw')) {
+          newHeight = Math.max(50, startHeight - deltaY);
+        }
+        
+        if (mediaElement.tagName === 'IMG') {
+          mediaElement.style.width = `${newWidth}px`;
+          mediaElement.style.height = 'auto'; // Maintain aspect ratio for images
+        } else {
+          container.style.width = `${newWidth}px`;
+          mediaElement.style.height = `${newHeight}px`;
+        }
+      }
+    };
+    
+    const handleMouseUp = () => {
+      isResizing = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
   });
 }
 
-function removeResizeHandles(element: HTMLElement) {
-  const handles = element.querySelectorAll('.resize-handle');
-  handles.forEach(handle => handle.remove());
-}
-
-function getHandlePosition(handle: string): string {
-  switch (handle) {
-    case 'nw': return 'top: -4px; left: -4px;';
-    case 'ne': return 'top: -4px; right: -4px;';
-    case 'sw': return 'bottom: -4px; left: -4px;';
-    case 'se': return 'bottom: -4px; right: -4px;';
-    default: return '';
-  }
-}
-
-function scaleElement(element: HTMLElement, factor: number) {
-  const currentWidth = parseInt(element.style.width) || 300;
-  const newWidth = Math.max(50, Math.round(currentWidth * factor));
-  element.style.width = `${newWidth}px`;
+function scaleElement(container: HTMLElement, factor: number) {
+  const mediaElement = container.querySelector('img, .embed-content') as HTMLElement;
+  if (!mediaElement) return;
   
-  // Maintain aspect ratio if it's an image
-  if (element.tagName === 'IMG') {
-    element.style.height = 'auto';
+  if (mediaElement.tagName === 'IMG') {
+    const currentWidth = parseInt(mediaElement.style.width) || 300;
+    const newWidth = Math.max(50, Math.round(currentWidth * factor));
+    mediaElement.style.width = `${newWidth}px`;
+    mediaElement.style.height = 'auto';
+  } else {
+    const currentWidth = parseInt(container.style.width) || 560;
+    const currentHeight = parseInt(mediaElement.style.height) || 315;
+    const newWidth = Math.max(200, Math.round(currentWidth * factor));
+    const newHeight = Math.max(150, Math.round(currentHeight * factor));
+    
+    container.style.width = `${newWidth}px`;
+    mediaElement.style.height = `${newHeight}px`;
   }
 }
 
-function duplicateElement(element: HTMLElement) {
-  const clonedElement = element.cloneNode(true) as HTMLElement;
-  clonedElement.style.marginLeft = `${(parseInt(element.style.marginLeft) || 0) + 20}px`;
-  clonedElement.style.marginTop = `${(parseInt(element.style.marginTop) || 0) + 20}px`;
+function duplicateElement(container: HTMLElement) {
+  const clonedElement = container.cloneNode(true) as HTMLElement;
+  clonedElement.style.marginLeft = `${(parseInt(container.style.marginLeft) || 0) + 20}px`;
+  clonedElement.style.marginTop = `${(parseInt(container.style.marginTop) || 0) + 20}px`;
   clonedElement.classList.remove('media-selected');
   clonedElement.style.outline = 'none';
-  removeResizeHandles(clonedElement);
-  element.parentNode?.insertBefore(clonedElement, element.nextSibling);
+  const handles = clonedElement.querySelector('.resize-handles') as HTMLElement;
+  if (handles) handles.style.display = 'none';
+  container.parentNode?.insertBefore(clonedElement, container.nextSibling);
 }
