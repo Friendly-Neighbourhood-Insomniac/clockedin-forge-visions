@@ -8,7 +8,8 @@ import EditorToolbar from '@/components/editor/EditorToolbar';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText } from 'lucide-react';
+import { Plus, FileText, Eye, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Editor: React.FC = () => {
   const {
@@ -59,18 +60,36 @@ const Editor: React.FC = () => {
       <div className="relative z-10 container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-6">
-          <Input
-            value={metadata.title}
-            onChange={(e) => updateMetadata('title', e.target.value)}
-            placeholder="Book Title"
-            className="text-2xl font-bold bg-transparent border-none text-cyan-100 placeholder-slate-400 p-0 h-auto focus:ring-0 mb-2"
-          />
-          <Input
-            value={metadata.author}
-            onChange={(e) => updateMetadata('author', e.target.value)}
-            placeholder="Author Name"
-            className="text-lg bg-transparent border-none text-slate-300 placeholder-slate-500 p-0 h-auto focus:ring-0"
-          />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex-1">
+              <Input
+                value={metadata.title}
+                onChange={(e) => updateMetadata('title', e.target.value)}
+                placeholder="Book Title"
+                className="text-2xl font-bold bg-transparent border-none text-cyan-100 placeholder-slate-400 p-0 h-auto focus:ring-0 mb-2"
+              />
+              <Input
+                value={metadata.author}
+                onChange={(e) => updateMetadata('author', e.target.value)}
+                placeholder="Author Name"
+                className="text-lg bg-transparent border-none text-slate-300 placeholder-slate-500 p-0 h-auto focus:ring-0"
+              />
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              <Link to="/preview">
+                <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-white">
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview
+                </Button>
+              </Link>
+              <Link to="/export">
+                <Button size="sm" variant="outline" className="border-cyan-400/30 text-slate-300 hover:text-white hover:bg-slate-700">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-4 gap-6">
