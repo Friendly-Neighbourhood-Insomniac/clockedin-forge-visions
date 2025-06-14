@@ -31,7 +31,14 @@ const EditorToolbar: React.FC = () => {
 
   const toggleBold = () => editor.commands.toggleBold();
   const toggleItalic = () => editor.commands.toggleItalic();
-  const toggleUnderline = () => editor.commands.toggleUnderline();
+  const toggleUnderline = () => {
+    // Check if underline is available, if not just log it
+    if (editor.commands.toggleUnderline) {
+      editor.commands.toggleUnderline();
+    } else {
+      console.log('Underline command not available');
+    }
+  };
   const toggleBulletList = () => editor.commands.toggleBulletList();
   const toggleOrderedList = () => editor.commands.toggleOrderedList();
   const toggleBlockquote = () => editor.commands.toggleBlockquote();

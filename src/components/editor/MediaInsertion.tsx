@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useEditorStore } from '@/stores/editorStore';
 import { Button } from '@/components/ui/button';
@@ -20,8 +19,7 @@ const MediaInsertion: React.FC = () => {
       
       editor.commands.setImage({
         src: imageUrl,
-        alt: metadata?.alt || 'Uploaded image',
-        style: `width: ${metadata?.width || '300px'}; height: ${metadata?.height || '200px'};`
+        alt: metadata?.alt || 'Uploaded image'
       });
       
       console.log('Image inserted successfully');
