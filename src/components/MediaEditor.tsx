@@ -21,39 +21,85 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate })
   const [position, setPosition] = useState('static');
 
   useEffect(() => {
-    // Initialize values from element
+    // Initialize values from element's current styles
     const computedStyle = window.getComputedStyle(element);
-    setWidth(element.style.width || computedStyle.width || '100%');
-    setHeight(element.style.height || computedStyle.height || 'auto');
-    setAlignment(element.style.float || computedStyle.textAlign || 'left');
-    setMargin(element.style.margin?.replace(/px/g, '') || '10');
+    
+    // Get actual dimensions
+    const currentWidth = element.style.width || computedStyle.width;
+    const currentHeight = element.style.height || computedStyle.height;
+    
+    setWidth(currentWidth === 'auto' ? '' : currentWidth);
+    setHeight(currentHeight === 'auto' ? '' : currentHeight);
+    
+    // Determine alignment from current styles
+    const float = element.style.float || computedStyle.float;
+    const textAlign = element.style.textAlign || computedStyle.textAlign;
+    const marginLeft = element.style.marginLeft;
+    const marginRight = element.style.marginRight;
+    
+    if (float === 'left') setAlignment('left');
+    else if (float === 'right') setAlignment('right');
+    else if (marginLeft === 'auto' && marginRight === 'auto') setAlignment('center');
+    else setAlignment('left');
+    
+    // Get margin value
+    const currentMargin = element.style.margin?.replace(/px/g, '') || '10';
+    setMargin(currentMargin);
+    
+    // Get position
     setPosition(element.style.position || 'static');
   }, [element]);
 
   const handleUpdate = () => {
-    // Apply styles to element
-    element.style.width = width;
-    element.style.height = height;
-    element.style.margin = `${margin}px`;
-    element.style.position = position;
-    
-    // Handle alignment
-    element.style.float = alignment === 'left' || alignment === 'right' ? alignment : 'none';
-    if (alignment === 'center') {
-      element.style.display = 'block';
-      element.style.marginLeft = 'auto';
-      element.style.marginRight = 'auto';
-      element.style.float = 'none';
+    try {
+      // Clear previous alignment styles
+      element.style.float = '';
+      element.style.marginLeft = '';
+      element.style.marginRight = '';
+      element.style.display = '';
+      
+      // Apply dimensions
+      if (width) {
+        element.style.width = width.includes('px') || width.includes('%') ? width : `${width}px`;
+      }
+      if (height) {
+        element.style.height = height.includes('px') || height.includes('%') ? height : `${height}px`;
+      }
+      
+      // Apply margin
+      const marginValue = margin && !isNaN(Number(margin)) ? `${margin}px` : '10px';
+      element.style.margin = marginValue;
+      
+      // Apply position
+      element.style.position = position;
+      
+      // Apply alignment
+      switch (alignment) {
+        case 'left':
+          element.style.float = 'left';
+          break;
+        case 'right':
+          element.style.float = 'right';
+          break;
+        case 'center':
+          element.style.display = 'block';
+          element.style.marginLeft = 'auto';
+          element.style.marginRight = 'auto';
+          element.style.float = 'none';
+          break;
+      }
+      
+      // Ensure element remains editable
+      element.classList.add('editable-media');
+      
+      onUpdate(element);
+    } catch (error) {
+      console.error('Error updating media element:', error);
     }
-
-    // Add draggable capability
-    element.draggable = true;
-    element.style.cursor = 'move';
-    
-    onUpdate(element);
   };
 
   const handleReset = () => {
+    // Reset all styles to defaults
     element.style.width = '';
     element.style.height = '';
     element.style.margin = '';
@@ -62,28 +108,32 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate })
     element.style.marginLeft = '';
     element.style.marginRight = '';
     element.style.position = '';
-    element.style.cursor = '';
-    element.draggable = false;
+    element.style.top = '';
+    element.style.left = '';
+    element.style.right = '';
+    element.style.bottom = '';
+    
     onUpdate(element);
     onClose();
   };
 
   const moveElement = (direction: 'up' | 'down' | 'left' | 'right') => {
-    const currentMargin = parseInt(margin) || 10;
     const step = 10;
+    const currentMarginTop = parseInt(element.style.marginTop) || 0;
+    const currentMarginLeft = parseInt(element.style.marginLeft) || 0;
     
     switch (direction) {
       case 'up':
-        element.style.marginTop = `${Math.max(0, (parseInt(element.style.marginTop) || currentMargin) - step)}px`;
+        element.style.marginTop = `${Math.max(0, currentMarginTop - step)}px`;
         break;
       case 'down':
-        element.style.marginTop = `${(parseInt(element.style.marginTop) || currentMargin) + step}px`;
+        element.style.marginTop = `${currentMarginTop + step}px`;
         break;
       case 'left':
-        element.style.marginLeft = `${Math.max(0, (parseInt(element.style.marginLeft) || currentMargin) - step)}px`;
+        element.style.marginLeft = `${Math.max(0, currentMarginLeft - step)}px`;
         break;
       case 'right':
-        element.style.marginLeft = `${(parseInt(element.style.marginLeft) || currentMargin) + step}px`;
+        element.style.marginLeft = `${currentMarginLeft + step}px`;
         break;
     }
     onUpdate(element);
@@ -109,7 +159,7 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate })
             <Input
               value={width}
               onChange={(e) => setWidth(e.target.value)}
-              placeholder="100% or 300px"
+              placeholder="300px or 50%"
               className="bg-slate-700 border-slate-600 text-slate-100 h-8"
             />
           </div>
@@ -118,7 +168,7 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate })
             <Input
               value={height}
               onChange={(e) => setHeight(e.target.value)}
-              placeholder="auto or 200px"
+              placeholder="200px or auto"
               className="bg-slate-700 border-slate-600 text-slate-100 h-8"
             />
           </div>
