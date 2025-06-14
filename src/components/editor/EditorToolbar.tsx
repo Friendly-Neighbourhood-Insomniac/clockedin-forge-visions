@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { EditorState, RichUtils } from 'draft-js';
 import { useEditorStore } from '@/stores/editorStore';
 import { Button } from '@/components/ui/button';
 import { 
@@ -18,38 +17,29 @@ import { Card, CardContent } from '@/components/ui/card';
 import MediaInsertion from './MediaInsertion';
 
 const BLOCK_TYPES = [
-  { label: 'H1', style: 'header-one' },
-  { label: 'H2', style: 'header-two' },
-  { label: 'H3', style: 'header-three' },
-  { label: 'Quote', style: 'blockquote' },
-  { label: 'UL', style: 'unordered-list-item' },
-  { label: 'OL', style: 'ordered-list-item' },
-  { label: 'Code', style: 'code-block' }
-];
-
-const INLINE_STYLES = [
-  { label: 'Bold', style: 'BOLD', icon: Bold },
-  { label: 'Italic', style: 'ITALIC', icon: Italic },
-  { label: 'Underline', style: 'UNDERLINE', icon: Underline }
+  { label: 'H1', command: () => ({ level: 1 }) },
+  { label: 'H2', command: () => ({ level: 2 }) },
+  { label: 'H3', command: () => ({ level: 3 }) },
 ];
 
 const EditorToolbar: React.FC = () => {
-  const { editorState, setEditorState, undo, redo } = useEditorStore();
+  const { editor, undo, redo } = useEditorStore();
 
-  const toggleBlockType = (blockType: string) => {
-    setEditorState(RichUtils.toggleBlockType(editorState, blockType));
+  if (!editor) {
+    return null;
+  }
+
+  const toggleBold = () => editor.commands.toggleBold();
+  const toggleItalic = () => editor.commands.toggleItalic();
+  const toggleUnderline = () => editor.commands.toggleUnderline();
+  const toggleBulletList = () => editor.commands.toggleBulletList();
+  const toggleOrderedList = () => editor.commands.toggleOrderedList();
+  const toggleBlockquote = () => editor.commands.toggleBlockquote();
+  const toggleCodeBlock = () => editor.commands.toggleCodeBlock();
+
+  const setHeading = (level: 1 | 2 | 3) => {
+    editor.commands.toggleHeading({ level });
   };
-
-  const toggleInlineStyle = (inlineStyle: string) => {
-    setEditorState(RichUtils.toggleInlineStyle(editorState, inlineStyle));
-  };
-
-  const currentStyle = editorState.getCurrentInlineStyle();
-  const selection = editorState.getSelection();
-  const blockType = editorState
-    .getCurrentContent()
-    .getBlockForKey(selection.getStartKey())
-    .getType();
 
   return (
     <Card className="bg-slate-800/50 border-cyan-400/30 mb-4">
@@ -77,36 +67,56 @@ const EditorToolbar: React.FC = () => {
 
           {/* Inline Styles */}
           <div className="flex gap-1 mr-4">
-            {INLINE_STYLES.map(({ label, style, icon: Icon }) => (
-              <Button
-                key={style}
-                size="sm"
-                variant="ghost"
-                onClick={() => toggleInlineStyle(style)}
-                className={`text-slate-300 hover:text-white hover:bg-slate-700 ${
-                  currentStyle.has(style) ? 'bg-cyan-600/20 text-cyan-300' : ''
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-              </Button>
-            ))}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={toggleBold}
+              className={`text-slate-300 hover:text-white hover:bg-slate-700 ${
+                editor.isActive('bold') ? 'bg-cyan-600/20 text-cyan-300' : ''
+              }`}
+            >
+              <Bold className="w-4 h-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={toggleItalic}
+              className={`text-slate-300 hover:text-white hover:bg-slate-700 ${
+                editor.isActive('italic') ? 'bg-cyan-600/20 text-cyan-300' : ''
+              }`}
+            >
+              <Italic className="w-4 h-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={toggleUnderline}
+              className={`text-slate-300 hover:text-white hover:bg-slate-700 ${
+                editor.isActive('underline') ? 'bg-cyan-600/20 text-cyan-300' : ''
+              }`}
+            >
+              <Underline className="w-4 h-4" />
+            </Button>
           </div>
 
           {/* Block Types */}
           <div className="flex gap-1 mr-4">
-            {BLOCK_TYPES.slice(0, 3).map(({ label, style }) => (
-              <Button
-                key={style}
-                size="sm"
-                variant="ghost"
-                onClick={() => toggleBlockType(style)}
-                className={`text-slate-300 hover:text-white hover:bg-slate-700 ${
-                  blockType === style ? 'bg-cyan-600/20 text-cyan-300' : ''
-                }`}
-              >
-                {label}
-              </Button>
-            ))}
+            {BLOCK_TYPES.map(({ label }, index) => {
+              const level = (index + 1) as 1 | 2 | 3;
+              return (
+                <Button
+                  key={label}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setHeading(level)}
+                  className={`text-slate-300 hover:text-white hover:bg-slate-700 ${
+                    editor.isActive('heading', { level }) ? 'bg-cyan-600/20 text-cyan-300' : ''
+                  }`}
+                >
+                  {label}
+                </Button>
+              );
+            })}
           </div>
 
           {/* Lists */}
@@ -114,9 +124,9 @@ const EditorToolbar: React.FC = () => {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => toggleBlockType('unordered-list-item')}
+              onClick={toggleBulletList}
               className={`text-slate-300 hover:text-white hover:bg-slate-700 ${
-                blockType === 'unordered-list-item' ? 'bg-cyan-600/20 text-cyan-300' : ''
+                editor.isActive('bulletList') ? 'bg-cyan-600/20 text-cyan-300' : ''
               }`}
             >
               <List className="w-4 h-4" />
@@ -124,9 +134,9 @@ const EditorToolbar: React.FC = () => {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => toggleBlockType('ordered-list-item')}
+              onClick={toggleOrderedList}
               className={`text-slate-300 hover:text-white hover:bg-slate-700 ${
-                blockType === 'ordered-list-item' ? 'bg-cyan-600/20 text-cyan-300' : ''
+                editor.isActive('orderedList') ? 'bg-cyan-600/20 text-cyan-300' : ''
               }`}
             >
               <ListOrdered className="w-4 h-4" />
@@ -135,7 +145,7 @@ const EditorToolbar: React.FC = () => {
 
           {/* Media Insertion */}
           <div className="flex gap-1 mr-4 border-l border-slate-600 pl-4">
-            <MediaInsertion editorState={editorState} setEditorState={setEditorState} />
+            <MediaInsertion />
           </div>
 
           {/* Additional Tools */}
@@ -143,14 +153,20 @@ const EditorToolbar: React.FC = () => {
             <Button
               size="sm"
               variant="ghost"
-              className="text-slate-300 hover:text-white hover:bg-slate-700"
+              onClick={toggleBlockquote}
+              className={`text-slate-300 hover:text-white hover:bg-slate-700 ${
+                editor.isActive('blockquote') ? 'bg-cyan-600/20 text-cyan-300' : ''
+              }`}
             >
               <Type className="w-4 h-4" />
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              className="text-slate-300 hover:text-white hover:bg-slate-700"
+              onClick={toggleCodeBlock}
+              className={`text-slate-300 hover:text-white hover:bg-slate-700 ${
+                editor.isActive('codeBlock') ? 'bg-cyan-600/20 text-cyan-300' : ''
+              }`}
             >
               <Palette className="w-4 h-4" />
             </Button>

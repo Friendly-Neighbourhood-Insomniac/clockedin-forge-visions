@@ -1,135 +1,86 @@
 
 import React from 'react';
-import { EditorState, AtomicBlockUtils } from 'draft-js';
+import { useEditorStore } from '@/stores/editorStore';
 import { Button } from '@/components/ui/button';
 import { ImagePlus, Video, Globe } from 'lucide-react';
 import EnhancedImageUpload from '@/components/EnhancedImageUpload';
 import EmbedInsert from '@/components/EmbedInsert';
 
-interface MediaInsertionProps {
-  editorState: EditorState;
-  setEditorState: (editorState: EditorState) => void;
-}
+const MediaInsertion: React.FC = () => {
+  const { editor } = useEditorStore();
 
-const MediaInsertion: React.FC<MediaInsertionProps> = ({ editorState, setEditorState }) => {
-  const insertImageEntity = (imageUrl: string, metadata?: { width?: string; height?: string; alt?: string }) => {
+  const insertImage = (imageUrl: string, metadata?: { width?: string; height?: string; alt?: string }) => {
+    if (!editor) {
+      console.error('No editor available');
+      return;
+    }
+
     try {
-      console.log('Inserting image entity:', imageUrl);
+      console.log('Inserting image:', imageUrl);
       
-      if (!editorState) {
-        console.error('No editor state available');
-        return;
-      }
-
-      const contentState = editorState.getCurrentContent();
-      if (!contentState) {
-        console.error('No content state available');
-        return;
-      }
-
-      const contentStateWithEntity = contentState.createEntity('IMAGE', 'IMMUTABLE', {
+      editor.commands.setImage({
         src: imageUrl,
         alt: metadata?.alt || 'Uploaded image',
-        width: metadata?.width ? parseInt(metadata.width) : 300,
-        height: metadata?.height ? parseInt(metadata.height) : 200,
-        x: 0,
-        y: 0
+        style: `width: ${metadata?.width || '300px'}; height: ${metadata?.height || '200px'};`
       });
       
-      const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
-      if (!entityKey) {
-        console.error('Failed to create entity');
-        return;
-      }
-
-      const newEditorState = EditorState.set(editorState, { currentContent: contentStateWithEntity });
-      const finalEditorState = AtomicBlockUtils.insertAtomicBlock(newEditorState, entityKey, ' ');
-      
-      setEditorState(finalEditorState);
-      console.log('Image entity inserted successfully');
+      console.log('Image inserted successfully');
     } catch (error) {
-      console.error('Error inserting image entity:', error);
+      console.error('Error inserting image:', error);
     }
   };
 
-  const insertVideoEntity = (videoData: { url: string; title: string }) => {
+  const insertVideo = (videoData: { url: string; title: string }) => {
+    if (!editor) {
+      console.error('No editor available');
+      return;
+    }
+
     try {
-      console.log('Inserting video entity:', videoData);
+      console.log('Inserting video:', videoData);
       
-      if (!editorState) {
-        console.error('No editor state available');
-        return;
+      if (videoData.url.includes('youtube.com') || videoData.url.includes('youtu.be')) {
+        editor.commands.setYoutubeVideo({
+          src: videoData.url,
+          width: 400,
+          height: 300,
+        });
+      } else {
+        // For other videos, insert as iframe
+        const iframe = `<iframe src="${videoData.url}" width="400" height="300" frameborder="0" allowfullscreen></iframe>`;
+        editor.commands.insertContent(iframe);
       }
-
-      const contentState = editorState.getCurrentContent();
-      if (!contentState) {
-        console.error('No content state available');
-        return;
-      }
-
-      const contentStateWithEntity = contentState.createEntity('VIDEO', 'IMMUTABLE', {
-        src: videoData.url,
-        title: videoData.title,
-        width: 400,
-        height: 300,
-        x: 0,
-        y: 0
-      });
       
-      const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
-      if (!entityKey) {
-        console.error('Failed to create video entity');
-        return;
-      }
-
-      const newEditorState = EditorState.set(editorState, { currentContent: contentStateWithEntity });
-      const finalEditorState = AtomicBlockUtils.insertAtomicBlock(newEditorState, entityKey, ' ');
-      
-      setEditorState(finalEditorState);
-      console.log('Video entity inserted successfully');
+      console.log('Video inserted successfully');
     } catch (error) {
-      console.error('Error inserting video entity:', error);
+      console.error('Error inserting video:', error);
     }
   };
 
-  const insertEmbedEntity = (embedData: { url: string; title: string; type: 'video' | 'website' }) => {
+  const insertEmbed = (embedData: { url: string; title: string; type: 'video' | 'website' }) => {
+    if (!editor) {
+      console.error('No editor available');
+      return;
+    }
+
     try {
-      console.log('Inserting embed entity:', embedData);
+      console.log('Inserting embed:', embedData);
       
-      if (!editorState) {
-        console.error('No editor state available');
-        return;
+      if (embedData.type === 'video' && (embedData.url.includes('youtube.com') || embedData.url.includes('youtu.be'))) {
+        editor.commands.setYoutubeVideo({
+          src: embedData.url,
+          width: 400,
+          height: 300,
+        });
+      } else {
+        // For other embeds, insert as iframe
+        const iframe = `<iframe src="${embedData.url}" width="400" height="300" frameborder="0" allowfullscreen title="${embedData.title}"></iframe>`;
+        editor.commands.insertContent(iframe);
       }
-
-      const contentState = editorState.getCurrentContent();
-      if (!contentState) {
-        console.error('No content state available');
-        return;
-      }
-
-      const contentStateWithEntity = contentState.createEntity('EMBED', 'IMMUTABLE', {
-        url: embedData.url,
-        title: embedData.title,
-        type: embedData.type,
-        width: 400,
-        height: 300,
-        x: 0,
-        y: 0
-      });
       
-      const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
-      if (!entityKey) {
-        console.error('Failed to create embed entity');
-        return;
-      }
-
-      const newEditorState = EditorState.set(editorState, { currentContent: contentStateWithEntity });
-      const finalEditorState = AtomicBlockUtils.insertAtomicBlock(newEditorState, entityKey, ' ');
-      
-      setEditorState(finalEditorState);
-      console.log('Embed entity inserted successfully');
+      console.log('Embed inserted successfully');
     } catch (error) {
-      console.error('Error inserting embed entity:', error);
+      console.error('Error inserting embed:', error);
     }
   };
 
@@ -137,13 +88,13 @@ const MediaInsertion: React.FC<MediaInsertionProps> = ({ editorState, setEditorS
     const url = prompt('Enter video URL (YouTube, Vimeo, etc.):');
     if (url) {
       const title = prompt('Enter video title:') || 'Video';
-      insertVideoEntity({ url, title });
+      insertVideo({ url, title });
     }
   };
 
   return (
     <div className="flex gap-2">
-      <EnhancedImageUpload onImageInsert={insertImageEntity} />
+      <EnhancedImageUpload onImageInsert={insertImage} />
       
       <Button
         onClick={handleVideoInsert}
@@ -155,7 +106,7 @@ const MediaInsertion: React.FC<MediaInsertionProps> = ({ editorState, setEditorS
         <Video className="w-4 h-4" />
       </Button>
       
-      <EmbedInsert onEmbedInsert={insertEmbedEntity} />
+      <EmbedInsert onEmbedInsert={insertEmbed} />
     </div>
   );
 };

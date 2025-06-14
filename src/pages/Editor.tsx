@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useChapterTreeStore } from '@/stores/chapterTreeStore';
 import { useBookMetadataStore } from '@/stores/bookMetadataStore';
 import { useEditorStore } from '@/stores/editorStore';
-import DraftailEditor from '@/components/editor/DraftailEditor';
+import TiptapEditor from '@/components/editor/TiptapEditor';
 import EditorToolbar from '@/components/editor/EditorToolbar';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,7 @@ const Editor: React.FC = () => {
   } = useChapterTreeStore();
 
   const { metadata, updateMetadata } = useBookMetadataStore();
-  const { loadContent, getContentAsRaw } = useEditorStore();
+  const { loadContent, getContentAsHTML } = useEditorStore();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState<string | null>(null);
 
@@ -51,7 +51,7 @@ const Editor: React.FC = () => {
   // Save content when editor state changes
   const handleContentSave = () => {
     if (selectedChapterId) {
-      const content = getContentAsRaw();
+      const content = getContentAsHTML();
       updateChapter(selectedChapterId, { content });
     }
   };
@@ -282,8 +282,8 @@ const Editor: React.FC = () => {
                 {/* Editor Toolbar */}
                 <EditorToolbar />
 
-                {/* Draft.js Editor */}
-                <DraftailEditor
+                {/* Tiptap Editor */}
+                <TiptapEditor
                   placeholder="Start writing your chapter..."
                   onBlur={handleContentSave}
                 />

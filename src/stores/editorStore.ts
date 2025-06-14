@@ -1,68 +1,86 @@
 
 import { create } from 'zustand';
-import { EditorState, ContentState, convertFromRaw, convertToRaw } from 'draft-js';
+import { Editor } from '@tiptap/react';
 
 interface EditorStoreState {
-  editorState: EditorState;
+  editor: Editor | null;
+  content: string;
   isReadOnly: boolean;
-  selectionState: any;
-  undoStack: any[];
-  redoStack: any[];
   
   // Actions
-  setEditorState: (editorState: EditorState) => void;
+  setEditor: (editor: Editor | null) => void;
+  setContent: (content: string) => void;
   setReadOnly: (readOnly: boolean) => void;
   undo: () => void;
   redo: () => void;
   clearContent: () => void;
-  loadContent: (content: any) => void;
-  getContentAsRaw: () => any;
+  loadContent: (content: string) => void;
+  getContentAsHTML: () => string;
+  getContentAsJSON: () => any;
 }
 
 export const useEditorStore = create<EditorStoreState>((set, get) => ({
-  editorState: EditorState.createEmpty(),
+  editor: null,
+  content: '',
   isReadOnly: false,
-  selectionState: null,
-  undoStack: [],
-  redoStack: [],
 
-  setEditorState: (editorState) => {
-    set({ editorState });
+  setEditor: (editor) => {
+    set({ editor });
+  },
+
+  setContent: (content) => {
+    const { editor } = get();
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content);
+    }
+    set({ content });
   },
 
   setReadOnly: (readOnly) => {
+    const { editor } = get();
+    if (editor) {
+      editor.setEditable(!readOnly);
+    }
     set({ isReadOnly: readOnly });
   },
 
   undo: () => {
-    const { editorState } = get();
-    const newEditorState = EditorState.undo(editorState);
-    set({ editorState: newEditorState });
-  },
-
-  redo: () => {
-    const { editorState } = get();
-    const newEditorState = EditorState.redo(editorState);
-    set({ editorState: newEditorState });
-  },
-
-  clearContent: () => {
-    set({ editorState: EditorState.createEmpty() });
-  },
-
-  loadContent: (content) => {
-    try {
-      const contentState = convertFromRaw(content);
-      const editorState = EditorState.createWithContent(contentState);
-      set({ editorState });
-    } catch (error) {
-      console.error('Error loading content:', error);
-      set({ editorState: EditorState.createEmpty() });
+    const { editor } = get();
+    if (editor) {
+      editor.commands.undo();
     }
   },
 
-  getContentAsRaw: () => {
-    const { editorState } = get();
-    return convertToRaw(editorState.getCurrentContent());
+  redo: () => {
+    const { editor } = get();
+    if (editor) {
+      editor.commands.redo();
+    }
+  },
+
+  clearContent: () => {
+    const { editor } = get();
+    if (editor) {
+      editor.commands.clearContent();
+    }
+    set({ content: '' });
+  },
+
+  loadContent: (content) => {
+    const { editor } = get();
+    if (editor) {
+      editor.commands.setContent(content);
+    }
+    set({ content });
+  },
+
+  getContentAsHTML: () => {
+    const { editor } = get();
+    return editor ? editor.getHTML() : '';
+  },
+
+  getContentAsJSON: () => {
+    const { editor } = get();
+    return editor ? editor.getJSON() : null;
   }
 }));
