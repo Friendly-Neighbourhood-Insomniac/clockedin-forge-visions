@@ -13,39 +13,36 @@ const KineticText: React.FC<KineticTextProps> = ({ text, className = '', delay =
 
   const container = {
     hidden: { opacity: 0 },
-    visible: {
+    visible: (i = 1) => ({
       opacity: 1,
-      transition: {
-        delayChildren: delay,
-        staggerChildren: 0.1
-      }
-    }
+      transition: { staggerChildren: 0.12, delayChildren: 0.04 * i + delay },
+    }),
   };
 
   const child = {
-    hidden: { 
-      opacity: 0, 
-      y: 20,
-      scale: 0.8
-    },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         damping: 12,
-        stiffness: 100
-      }
-    }
+        stiffness: 100,
+      },
+    },
+    hidden: {
+      opacity: 0,
+      y: 20,
+      scale: 0.8,
+    },
   };
 
   return (
     <motion.div
+      className={className}
       variants={container}
       initial="hidden"
       animate="visible"
-      className={className}
     >
       {words.map((word, index) => (
         <motion.span
