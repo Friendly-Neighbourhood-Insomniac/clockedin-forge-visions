@@ -40,6 +40,7 @@ const BookEditor = () => {
   const [selectedChapter, setSelectedChapter] = useState<string>('');
   const [isFlipbookOpen, setIsFlipbookOpen] = useState(false);
   const [mediaEditor, setMediaEditor] = useState<{ element: HTMLElement; position: { x: number; y: number } } | null>(null);
+  const [draggedElement, setDraggedElement] = useState<HTMLElement | null>(null);
   const [bookData, setBookData] = useState<BookData>({
     title: '',
     author: '',
@@ -145,12 +146,13 @@ const BookEditor = () => {
         margin: 10px; 
         cursor: pointer; 
         border: 2px solid transparent;
-        transition: border-color 0.2s;
+        transition: all 0.2s ease;
         ${metadata?.width ? `width: ${metadata.width};` : ''}
         ${metadata?.height ? `height: ${metadata.height};` : ''}
       " 
       class="editable-media"
-      onclick="this.style.border = this.style.border === '2px solid rgb(6, 182, 212)' ? '2px solid transparent' : '2px solid rgb(6, 182, 212)'"
+      draggable="true"
+      data-media-type="image"
     />`;
     
     document.execCommand('insertHTML', false, img);
@@ -158,8 +160,8 @@ const BookEditor = () => {
       const content = editorRef.current.innerHTML;
       updateChapter(selectedChapter, 'content', content);
       
-      // Add click listeners to newly inserted images
-      setTimeout(() => setupMediaClickListeners(), 100);
+      // Add event listeners to newly inserted images
+      setTimeout(() => setupMediaEventListeners(), 100);
     }
   };
 
@@ -169,19 +171,24 @@ const BookEditor = () => {
            data-url="${embedData.url}" 
            data-title="${embedData.title}" 
            data-type="${embedData.type}" 
+           data-media-type="embed"
+           draggable="true"
            style="
              margin: 20px 0; 
              padding: 15px; 
              border: 2px solid #e2e8f0; 
              border-radius: 8px; 
              background: #f8fafc;
-             cursor: pointer;
-             transition: border-color 0.2s;
+             cursor: move;
+             transition: all 0.2s ease;
+             position: relative;
            "
-           onclick="this.style.border = this.style.border === '2px solid rgb(6, 182, 212)' ? '2px solid #e2e8f0' : '2px solid rgb(6, 182, 212)'"
       >
-        <h4 style="margin-bottom: 10px; color: #334155;">${embedData.title}</h4>
-        <iframe src="${embedData.url}" width="100%" height="315" frameborder="0" allowfullscreen style="border-radius: 4px;"></iframe>
+        <div class="embed-header" style="display: flex; justify-content: between; align-items: center; margin-bottom: 10px;">
+          <h4 style="margin: 0; color: #334155; flex: 1;">${embedData.title}</h4>
+          <span style="font-size: 10px; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">DRAG TO MOVE</span>
+        </div>
+        <iframe src="${embedData.url}" width="100%" height="315" frameborder="0" allowfullscreen style="border-radius: 4px; pointer-events: none;"></iframe>
         <p style="font-size: 12px; color: #64748b; margin-top: 8px;">🔗 ${embedData.type === 'video' ? 'Video' : 'Website'} Embed</p>
       </div>
     `;
@@ -191,17 +198,20 @@ const BookEditor = () => {
       const content = editorRef.current.innerHTML;
       updateChapter(selectedChapter, 'content', content);
       
-      // Add click listeners to newly inserted embeds
-      setTimeout(() => setupMediaClickListeners(), 100);
+      // Add event listeners to newly inserted embeds
+      setTimeout(() => setupMediaEventListeners(), 100);
     }
   };
 
-  const setupMediaClickListeners = () => {
+  const setupMediaEventListeners = () => {
     if (!editorRef.current) return;
     
     const mediaElements = editorRef.current.querySelectorAll('.editable-media');
     mediaElements.forEach((element) => {
-      element.addEventListener('dblclick', (e) => {
+      const mediaElement = element as HTMLElement;
+      
+      // Double-click to edit
+      mediaElement.addEventListener('dblclick', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
@@ -209,14 +219,63 @@ const BookEditor = () => {
         const editorRect = editorRef.current!.getBoundingClientRect();
         
         setMediaEditor({
-          element: element as HTMLElement,
+          element: mediaElement,
           position: {
-            x: rect.right - editorRect.left + 10,
+            x: Math.min(rect.right - editorRect.left + 10, window.innerWidth - 350),
             y: rect.top - editorRect.top
           }
         });
       });
+
+      // Hover effects
+      mediaElement.addEventListener('mouseenter', () => {
+        mediaElement.style.border = '2px solid rgb(6, 182, 212)';
+        mediaElement.style.boxShadow = '0 4px 12px rgba(6, 182, 212, 0.3)';
+      });
+
+      mediaElement.addEventListener('mouseleave', () => {
+        if (mediaElement !== draggedElement) {
+          mediaElement.style.border = '2px solid transparent';
+          mediaElement.style.boxShadow = 'none';
+        }
+      });
+
+      // Drag and drop functionality
+      mediaElement.addEventListener('dragstart', (e) => {
+        setDraggedElement(mediaElement);
+        mediaElement.style.opacity = '0.5';
+        mediaElement.style.border = '2px dashed rgb(6, 182, 212)';
+        e.dataTransfer!.effectAllowed = 'move';
+      });
+
+      mediaElement.addEventListener('dragend', (e) => {
+        mediaElement.style.opacity = '1';
+        mediaElement.style.border = '2px solid transparent';
+        mediaElement.style.boxShadow = 'none';
+        setDraggedElement(null);
+      });
     });
+
+    // Set up drop zones in the editor
+    if (editorRef.current) {
+      editorRef.current.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer!.dropEffect = 'move';
+      });
+
+      editorRef.current.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (draggedElement) {
+          // Get drop position
+          const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+          if (range) {
+            range.insertNode(draggedElement);
+            const content = editorRef.current!.innerHTML;
+            updateChapter(selectedChapter, 'content', content);
+          }
+        }
+      });
+    }
   };
 
   const handleMediaUpdate = (element: HTMLElement) => {
@@ -226,10 +285,10 @@ const BookEditor = () => {
     }
   };
 
-  // Setup media click listeners when chapter content changes
+  // Setup media event listeners when chapter content changes
   useEffect(() => {
     if (currentChapter) {
-      setTimeout(() => setupMediaClickListeners(), 100);
+      setTimeout(() => setupMediaEventListeners(), 100);
     }
   }, [selectedChapter, currentChapter?.content]);
 
@@ -537,6 +596,7 @@ const BookEditor = () => {
                         <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
                         <p>Select a chapter to start writing</p>
                         <p className="text-sm mt-2">Double-click images and embeds to edit them</p>
+                        <p className="text-sm">Drag images and embeds to reposition them</p>
                       </div>
                     )}
                     
