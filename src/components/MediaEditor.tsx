@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -224,6 +225,39 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, p
     onClose();
   };
 
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        handleDelete();
+      } else if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowUp' && !e.shiftKey) {
+        e.preventDefault();
+        moveElement('up');
+      } else if (e.key === 'ArrowDown' && !e.shiftKey) {
+        e.preventDefault();
+        moveElement('down');
+      } else if (e.key === 'ArrowLeft' && !e.shiftKey) {
+        e.preventDefault();
+        moveElement('left');
+      } else if (e.key === 'ArrowRight' && !e.shiftKey) {
+        e.preventDefault();
+        moveElement('right');
+      } else if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        quickScale(1.1);
+      } else if (e.key === '-') {
+        e.preventDefault();
+        quickScale(0.9);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [snapToGrid, width, aspectRatio]);
+
   return (
     <div
       ref={cardRef}
@@ -249,6 +283,9 @@ const MediaEditor: React.FC<MediaEditorProps> = ({ element, onClose, onUpdate, p
               <X className="w-4 h-4" />
             </Button>
           </div>
+        </div>
+        <div className="text-xs text-slate-400 mt-1">
+          DEL: Delete • ESC: Close • +/-: Scale • Arrows: Move
         </div>
       </div>
       

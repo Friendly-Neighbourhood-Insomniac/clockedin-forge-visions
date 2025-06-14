@@ -25,7 +25,7 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
       const newElement = mediaElement.cloneNode(true) as HTMLElement;
       mediaElement.parentNode?.replaceChild(newElement, mediaElement);
       
-      // Single-click to select with visual feedback
+      // Single-click to select with enhanced visual feedback
       newElement.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -34,11 +34,16 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
         editorRef.current?.querySelectorAll('.editable-media').forEach(el => {
           (el as HTMLElement).style.outline = 'none';
           (el as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+          (el as HTMLElement).classList.remove('media-selected');
         });
         
-        // Select current element
+        // Select current element with enhanced styling
         newElement.style.outline = '3px solid rgb(6, 182, 212)';
         newElement.style.boxShadow = '0 0 20px rgba(6, 182, 212, 0.5)';
+        newElement.classList.add('media-selected');
+        
+        // Add corner resize handles
+        addResizeHandles(newElement);
       });
 
       // Double-click to edit
@@ -56,41 +61,41 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
         });
       });
 
-      // Enhanced hover effects with quick action hints
+      // Enhanced hover effects with better visual feedback
       newElement.addEventListener('mouseenter', () => {
-        if (!newElement.style.outline.includes('rgb(6, 182, 212)')) {
+        if (!newElement.classList.contains('media-selected')) {
           newElement.style.border = '2px dashed rgba(6, 182, 212, 0.6)';
         }
         newElement.style.cursor = 'pointer';
         
-        // Show quick action tooltip
+        // Show enhanced tooltip
         if (!newElement.querySelector('.quick-actions')) {
           const tooltip = document.createElement('div');
           tooltip.className = 'quick-actions';
           tooltip.style.cssText = `
             position: absolute;
-            top: -40px;
+            top: -45px;
             left: 50%;
             transform: translateX(-50%);
             background: linear-gradient(135deg, rgb(6, 182, 212), rgb(8, 145, 178));
             color: white;
-            padding: 6px 12px;
+            padding: 8px 12px;
             border-radius: 8px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
             z-index: 1000;
             pointer-events: none;
             box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
             white-space: nowrap;
           `;
-          tooltip.innerHTML = '👆 CLICK • ✋ DRAG • 🎯 DOUBLE-CLICK TO EDIT';
+          tooltip.innerHTML = '👆 CLICK TO SELECT • 🎯 DOUBLE-CLICK TO EDIT • 🖱️ DRAG TO MOVE';
           newElement.style.position = 'relative';
           newElement.appendChild(tooltip);
         }
       });
 
       newElement.addEventListener('mouseleave', () => {
-        if (!newElement.style.outline.includes('rgb(6, 182, 212)')) {
+        if (!newElement.classList.contains('media-selected')) {
           newElement.style.border = '2px solid transparent';
         }
         newElement.style.cursor = 'default';
@@ -102,11 +107,12 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
         }
       });
 
-      // Keyboard shortcuts for selected elements
+      // Enhanced keyboard shortcuts for selected elements
       newElement.addEventListener('keydown', (e) => {
-        if (newElement.style.outline.includes('rgb(6, 182, 212)')) {
+        if (newElement.classList.contains('media-selected')) {
           e.preventDefault();
           const step = e.shiftKey ? 20 : 5;
+          const scaleStep = e.shiftKey ? 0.2 : 0.1;
           
           switch (e.key) {
             case 'Delete':
@@ -136,6 +142,21 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
               newElement.style.marginLeft = `${currentRight + step}px`;
               onContentSync();
               break;
+            case '=':
+            case '+':
+              scaleElement(newElement, 1 + scaleStep);
+              onContentSync();
+              break;
+            case '-':
+              scaleElement(newElement, 1 - scaleStep);
+              onContentSync();
+              break;
+            case 'c':
+              if (e.ctrlKey || e.metaKey) {
+                duplicateElement(newElement);
+                onContentSync();
+              }
+              break;
           }
         }
       });
@@ -143,14 +164,18 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
       // Make element focusable for keyboard navigation
       newElement.setAttribute('tabindex', '0');
 
-      // Enhanced drag and drop with visual feedback
+      // Enhanced drag and drop with grid snapping
       newElement.addEventListener('dragstart', (e) => {
         e.dataTransfer!.effectAllowed = 'move';
         e.dataTransfer!.setData('text/html', newElement.outerHTML);
         newElement.style.opacity = '0.4';
         newElement.style.transform = 'rotate(2deg) scale(0.95)';
         
-        // Enhanced visual feedback
+        // Store snap to grid preference
+        const snapToGrid = localStorage.getItem('editor-snap-to-grid') === 'true';
+        e.dataTransfer!.setData('text/plain', snapToGrid ? 'snap' : 'free');
+        
+        // Enhanced visual feedback for drop zone
         if (editorRef.current) {
           editorRef.current.style.background = `
             linear-gradient(45deg, rgba(6, 182, 212, 0.1) 25%, transparent 25%, transparent 75%, rgba(6, 182, 212, 0.1) 75%),
@@ -178,18 +203,30 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
       });
     });
 
-    // Enhanced drop zone
+    // Enhanced drop zone with grid snapping
     if (editorRef.current) {
       const handleDragOver = (e: DragEvent) => {
         e.preventDefault();
         e.dataTransfer!.dropEffect = 'move';
         
-        // Enhanced drop indicator
+        // Enhanced drop indicator with grid snapping preview
         const dropIndicator = document.getElementById('drop-indicator');
+        const snapMode = e.dataTransfer!.getData('text/plain') === 'snap';
+        
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        
+        if (snapMode) {
+          clientX = Math.round(clientX / 20) * 20;
+          clientY = Math.round(clientY / 20) * 20;
+        }
+        
         if (dropIndicator) {
           dropIndicator.style.display = 'block';
-          dropIndicator.style.left = `${e.clientX - 15}px`;
-          dropIndicator.style.top = `${e.clientY - 15}px`;
+          dropIndicator.style.left = `${clientX - 15}px`;
+          dropIndicator.style.top = `${clientY - 15}px`;
+          dropIndicator.style.background = snapMode ? 'rgb(34, 197, 94)' : 'rgb(6, 182, 212)';
+          dropIndicator.innerHTML = snapMode ? '📐' : '📍';
         } else {
           const indicator = document.createElement('div');
           indicator.id = 'drop-indicator';
@@ -197,13 +234,13 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
             position: fixed;
             width: 30px;
             height: 30px;
-            background: rgb(6, 182, 212);
+            background: ${snapMode ? 'rgb(34, 197, 94)' : 'rgb(6, 182, 212)'};
             border-radius: 50%;
             pointer-events: none;
             z-index: 10000;
             opacity: 0.8;
-            left: ${e.clientX - 15}px;
-            top: ${e.clientY - 15}px;
+            left: ${clientX - 15}px;
+            top: ${clientY - 15}px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -212,7 +249,7 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
             font-weight: bold;
             box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
           `;
-          indicator.innerHTML = '📍';
+          indicator.innerHTML = snapMode ? '📐' : '📍';
           document.body.appendChild(indicator);
         }
       };
@@ -227,6 +264,7 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
       const handleDrop = (e: DragEvent) => {
         e.preventDefault();
         const htmlData = e.dataTransfer!.getData('text/html');
+        const snapMode = e.dataTransfer!.getData('text/plain') === 'snap';
         
         // Remove drop indicator
         const dropIndicator = document.getElementById('drop-indicator');
@@ -245,8 +283,7 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
           let clientX = e.clientX;
           let clientY = e.clientY;
           
-          const snapToGrid = localStorage.getItem('editor-snap-to-grid') === 'true';
-          if (snapToGrid) {
+          if (snapMode) {
             clientX = Math.round(clientX / 20) * 20;
             clientY = Math.round(clientY / 20) * 20;
           }
@@ -303,6 +340,8 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
         editorRef.current?.querySelectorAll('.editable-media').forEach(el => {
           (el as HTMLElement).style.outline = 'none';
           (el as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+          (el as HTMLElement).classList.remove('media-selected');
+          removeResizeHandles(el as HTMLElement);
         });
       }
     };
@@ -317,3 +356,64 @@ export const useMediaEditor = ({ editorRef, onMediaEditorOpen, onContentSync }: 
 
   return { setupMediaEventListeners };
 };
+
+// Helper functions for enhanced functionality
+function addResizeHandles(element: HTMLElement) {
+  // Remove existing handles
+  removeResizeHandles(element);
+  
+  const handles = ['nw', 'ne', 'sw', 'se'];
+  handles.forEach(handle => {
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = `resize-handle resize-${handle}`;
+    resizeHandle.style.cssText = `
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgb(6, 182, 212);
+      border: 1px solid white;
+      cursor: ${handle}-resize;
+      z-index: 1001;
+      ${getHandlePosition(handle)}
+    `;
+    
+    element.style.position = 'relative';
+    element.appendChild(resizeHandle);
+  });
+}
+
+function removeResizeHandles(element: HTMLElement) {
+  const handles = element.querySelectorAll('.resize-handle');
+  handles.forEach(handle => handle.remove());
+}
+
+function getHandlePosition(handle: string): string {
+  switch (handle) {
+    case 'nw': return 'top: -4px; left: -4px;';
+    case 'ne': return 'top: -4px; right: -4px;';
+    case 'sw': return 'bottom: -4px; left: -4px;';
+    case 'se': return 'bottom: -4px; right: -4px;';
+    default: return '';
+  }
+}
+
+function scaleElement(element: HTMLElement, factor: number) {
+  const currentWidth = parseInt(element.style.width) || 300;
+  const newWidth = Math.max(50, Math.round(currentWidth * factor));
+  element.style.width = `${newWidth}px`;
+  
+  // Maintain aspect ratio if it's an image
+  if (element.tagName === 'IMG') {
+    element.style.height = 'auto';
+  }
+}
+
+function duplicateElement(element: HTMLElement) {
+  const clonedElement = element.cloneNode(true) as HTMLElement;
+  clonedElement.style.marginLeft = `${(parseInt(element.style.marginLeft) || 0) + 20}px`;
+  clonedElement.style.marginTop = `${(parseInt(element.style.marginTop) || 0) + 20}px`;
+  clonedElement.classList.remove('media-selected');
+  clonedElement.style.outline = 'none';
+  removeResizeHandles(clonedElement);
+  element.parentNode?.insertBefore(clonedElement, element.nextSibling);
+}
