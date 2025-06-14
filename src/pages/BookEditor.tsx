@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Download, FileText, Eye, Save, Plus, Trash2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Quote, Image, Link } from 'lucide-react';
@@ -7,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import FlipbookPreview from '@/components/FlipbookPreview';
 
 interface Chapter {
   id: string;
@@ -26,6 +26,7 @@ const BookEditor = () => {
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement>(null);
   const [selectedChapter, setSelectedChapter] = useState<string>('');
+  const [isFlipbookOpen, setIsFlipbookOpen] = useState(false);
   const [bookData, setBookData] = useState<BookData>({
     title: '',
     author: '',
@@ -149,81 +150,7 @@ const BookEditor = () => {
   };
 
   const openFlipbookPreview = () => {
-    const previewWindow = window.open('', '_blank', 'width=800,height=600');
-    if (previewWindow) {
-      previewWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>${bookData.title} - Preview</title>
-            <style>
-              body { 
-                font-family: 'Georgia', serif; 
-                line-height: 1.6; 
-                margin: 0; 
-                padding: 20px;
-                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-              }
-              .book-container {
-                max-width: 800px;
-                margin: 0 auto;
-                background: white;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-                border-radius: 10px;
-                overflow: hidden;
-              }
-              .cover {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                text-align: center;
-                padding: 60px 40px;
-              }
-              .cover h1 { font-size: 2.5em; margin: 0; }
-              .cover .author { font-size: 1.2em; margin-top: 20px; opacity: 0.9; }
-              .chapter {
-                padding: 40px;
-                border-bottom: 1px solid #eee;
-              }
-              .chapter:last-child { border-bottom: none; }
-              .chapter h2 {
-                color: #333;
-                font-size: 1.8em;
-                margin-bottom: 20px;
-                border-bottom: 2px solid #667eea;
-                padding-bottom: 10px;
-              }
-              .navigation {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: rgba(0,0,0,0.8);
-                color: white;
-                padding: 10px;
-                border-radius: 5px;
-                font-size: 14px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="navigation">📖 Flipbook Preview</div>
-            <div class="book-container">
-              <div class="cover">
-                <h1>${bookData.title}</h1>
-                <div class="author">by ${bookData.author}</div>
-                <p style="margin-top: 30px; font-style: italic;">${bookData.description}</p>
-              </div>
-              ${bookData.chapters.map(chapter => `
-                <div class="chapter">
-                  <h2>${chapter.title}</h2>
-                  <div>${chapter.content}</div>
-                </div>
-              `).join('')}
-            </div>
-          </body>
-        </html>
-      `);
-      previewWindow.document.close();
-    }
+    setIsFlipbookOpen(true);
   };
 
   const currentChapter = bookData.chapters.find(ch => ch.id === selectedChapter);
@@ -461,6 +388,13 @@ const BookEditor = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Flipbook Preview Modal */}
+      <FlipbookPreview
+        isOpen={isFlipbookOpen}
+        onClose={() => setIsFlipbookOpen(false)}
+        bookData={bookData}
+      />
     </div>
   );
 };
