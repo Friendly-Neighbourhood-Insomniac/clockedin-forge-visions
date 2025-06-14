@@ -1,3 +1,4 @@
+
 import React, { useCallback, useRef, useEffect } from 'react';
 import { Editor, EditorState, RichUtils, getDefaultKeyBinding, KeyBindingUtil } from 'draft-js';
 import { useEditorStore } from '@/stores/editorStore';
@@ -29,16 +30,25 @@ const DraftailEditor: React.FC<DraftailEditorProps> = ({
     if (block.getType() === 'atomic') {
       const entityKey = block.getEntityAt(0);
       if (!entityKey) {
+        console.warn('Atomic block found without entity key');
         return null;
       }
       
       try {
-        const entity = editorState.getCurrentContent().getEntity(entityKey);
+        const contentState = editorState.getCurrentContent();
+        if (!contentState) {
+          console.warn('No content state available');
+          return null;
+        }
+
+        const entity = contentState.getEntity(entityKey);
         if (!entity) {
+          console.warn('Entity not found for key:', entityKey);
           return null;
         }
         
         const entityType = entity.getType();
+        console.log('Rendering entity of type:', entityType);
         
         if (entityType === 'IMAGE') {
           return {
@@ -74,7 +84,19 @@ const DraftailEditor: React.FC<DraftailEditorProps> = ({
         }
       } catch (error) {
         console.error('Error rendering entity:', error);
-        return null;
+        // Return a safe fallback instead of null
+        return {
+          component: () => React.createElement('div', { 
+            style: { 
+              padding: '10px', 
+              border: '1px solid #ccc', 
+              background: '#f5f5f5',
+              color: '#666',
+              fontSize: '14px'
+            }
+          }, 'Media content failed to load'),
+          editable: false,
+        };
       }
     }
     
@@ -84,6 +106,11 @@ const DraftailEditor: React.FC<DraftailEditorProps> = ({
   const handleEntityDataChange = useCallback((entityKey: string, newData: any) => {
     try {
       const currentContent = editorState.getCurrentContent();
+      if (!currentContent) {
+        console.warn('No current content available');
+        return;
+      }
+
       const entity = currentContent.getEntity(entityKey);
       if (!entity) {
         console.warn('Entity not found:', entityKey);
@@ -102,8 +129,12 @@ const DraftailEditor: React.FC<DraftailEditorProps> = ({
 
   const handleEntityRemove = useCallback((entityKey: string) => {
     try {
-      // Find and remove the block containing this entity
       const currentContent = editorState.getCurrentContent();
+      if (!currentContent) {
+        console.warn('No current content available');
+        return;
+      }
+
       const blockMap = currentContent.getBlockMap();
       
       const filteredBlocks = blockMap.filter(block => {
