@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -22,7 +23,6 @@ import { useEditorStore } from '@/stores/editorStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { ResizableImage } from './extensions/ResizableImage';
 import { Mathematics } from './extensions/Mathematics';
-import 'katex/dist/katex.min.css';
 
 const lowlight = createLowlight(common);
 
