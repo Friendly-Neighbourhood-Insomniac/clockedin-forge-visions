@@ -1,12 +1,16 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Download, FileText, Eye, Save, Plus, Trash2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Quote, Image, Link } from 'lucide-react';
+import { Download, FileText, Eye, Save, Plus, Trash2, BookOpen, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import FlipbookPreview from '@/components/FlipbookPreview';
+import BookMetadata from '@/components/BookMetadata';
+import AdvancedToolbar from '@/components/AdvancedToolbar';
+import BookStats from '@/components/BookStats';
 
 interface Chapter {
   id: string;
@@ -19,7 +23,14 @@ interface BookData {
   author: string;
   description: string;
   chapters: Chapter[];
-  coverImage?: string;
+  metadata: {
+    genre: string;
+    isbn: string;
+    publisher: string;
+    publishDate: string;
+    language: string;
+    keywords: string;
+  };
 }
 
 const BookEditor = () => {
@@ -31,7 +42,15 @@ const BookEditor = () => {
     title: '',
     author: '',
     description: '',
-    chapters: []
+    chapters: [],
+    metadata: {
+      genre: '',
+      isbn: '',
+      publisher: '',
+      publishDate: '',
+      language: 'en',
+      keywords: ''
+    }
   });
 
   // Load data from localStorage on component mount
@@ -99,21 +118,125 @@ const BookEditor = () => {
     }
   };
 
+  const handleFontChange = (font: string) => {
+    formatText('fontName', font);
+  };
+
+  const handleFontSizeChange = (size: string) => {
+    formatText('fontSize', size);
+  };
+
+  const handleColorChange = (color: string) => {
+    formatText('foreColor', color);
+  };
+
+  const handleImageInsert = (imageUrl: string) => {
+    const img = `<img src="${imageUrl}" alt="Inserted image" style="max-width: 100%; height: auto; margin: 10px 0;" />`;
+    document.execCommand('insertHTML', false, img);
+    if (editorRef.current) {
+      const content = editorRef.current.innerHTML;
+      updateChapter(selectedChapter, 'content', content);
+    }
+  };
+
+  const handleMetadataChange = (field: string, value: string) => {
+    if (field === 'title' || field === 'author' || field === 'description') {
+      setBookData(prev => ({ ...prev, [field]: value }));
+    } else {
+      setBookData(prev => ({
+        ...prev,
+        metadata: { ...prev.metadata, [field]: value }
+      }));
+    }
+  };
+
+  const generateEPUB = () => {
+    // Create EPUB-like structure
+    const epubContent = {
+      metadata: {
+        title: bookData.title,
+        author: bookData.author,
+        description: bookData.description,
+        ...bookData.metadata
+      },
+      chapters: bookData.chapters
+    };
+
+    const blob = new Blob([JSON.stringify(epubContent, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${bookData.title || 'My Book'}.epub.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "EPUB Generated",
+      description: "Your book has been exported in EPUB format.",
+    });
+  };
+
   const downloadPDF = async () => {
-    // Create a simple HTML document for PDF generation
+    // Enhanced HTML with better styling for PDF
     const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
           <title>${bookData.title}</title>
           <style>
-            body { font-family: 'Times New Roman', serif; line-height: 1.6; margin: 40px; }
-            .cover { text-align: center; page-break-after: always; }
-            .chapter { page-break-before: always; }
-            h1 { color: #2563eb; font-size: 2.5em; margin-bottom: 0.5em; }
-            h2 { color: #1e40af; font-size: 2em; margin-top: 2em; }
-            .author { font-size: 1.2em; color: #666; margin-top: 1em; }
-            .description { margin: 2em 0; font-style: italic; }
+            body { 
+              font-family: 'Georgia', serif; 
+              line-height: 1.6; 
+              margin: 40px; 
+              color: #333;
+            }
+            .cover { 
+              text-align: center; 
+              page-break-after: always; 
+              padding: 100px 0;
+            }
+            .chapter { 
+              page-break-before: always; 
+              margin-bottom: 50px;
+            }
+            h1 { 
+              color: #2563eb; 
+              font-size: 2.5em; 
+              margin-bottom: 0.5em; 
+              font-weight: bold;
+            }
+            h2 { 
+              color: #1e40af; 
+              font-size: 2em; 
+              margin-top: 2em; 
+              border-bottom: 2px solid #e5e7eb;
+              padding-bottom: 10px;
+            }
+            .author { 
+              font-size: 1.2em; 
+              color: #666; 
+              margin-top: 1em; 
+            }
+            .description { 
+              margin: 2em 0; 
+              font-style: italic; 
+              max-width: 600px;
+              margin-left: auto;
+              margin-right: auto;
+            }
+            .metadata {
+              margin-top: 50px;
+              font-size: 0.9em;
+              color: #888;
+            }
+            img {
+              max-width: 100%;
+              height: auto;
+              display: block;
+              margin: 20px auto;
+            }
           </style>
         </head>
         <body>
@@ -121,6 +244,11 @@ const BookEditor = () => {
             <h1>${bookData.title}</h1>
             <div class="author">by ${bookData.author}</div>
             <div class="description">${bookData.description}</div>
+            <div class="metadata">
+              ${bookData.metadata.genre ? `<p>Genre: ${bookData.metadata.genre}</p>` : ''}
+              ${bookData.metadata.isbn ? `<p>ISBN: ${bookData.metadata.isbn}</p>` : ''}
+              ${bookData.metadata.publisher ? `<p>Publisher: ${bookData.metadata.publisher}</p>` : ''}
+            </div>
           </div>
           ${bookData.chapters.map(chapter => `
             <div class="chapter">
@@ -132,7 +260,6 @@ const BookEditor = () => {
       </html>
     `;
 
-    // Create and download the file
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -168,9 +295,16 @@ const BookEditor = () => {
         >
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-4xl font-playfair font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-amber-300">
-              BookForge Editor
+              BookForge Professional
             </h1>
             <div className="flex gap-4">
+              <Button
+                onClick={generateEPUB}
+                className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export EPUB
+              </Button>
               <Button
                 onClick={downloadPDF}
                 className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
@@ -187,206 +321,137 @@ const BookEditor = () => {
               </Button>
             </div>
           </div>
-
-          {/* Book Metadata */}
-          <div className="grid md:grid-cols-3 gap-4 mb-6">
-            <Input
-              placeholder="Book Title"
-              value={bookData.title}
-              onChange={(e) => setBookData(prev => ({ ...prev, title: e.target.value }))}
-              className="bg-slate-800/50 border-cyan-400/30 text-white placeholder-slate-400"
-            />
-            <Input
-              placeholder="Author Name"
-              value={bookData.author}
-              onChange={(e) => setBookData(prev => ({ ...prev, author: e.target.value }))}
-              className="bg-slate-800/50 border-cyan-400/30 text-white placeholder-slate-400"
-            />
-            <Input
-              placeholder="Book Description"
-              value={bookData.description}
-              onChange={(e) => setBookData(prev => ({ ...prev, description: e.target.value }))}
-              className="bg-slate-800/50 border-cyan-400/30 text-white placeholder-slate-400"
-            />
-          </div>
         </motion.div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Chapter Sidebar */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-1"
-          >
-            <Card className="bg-slate-800/50 border-cyan-400/30">
-              <CardHeader>
-                <CardTitle className="text-cyan-100 flex items-center justify-between">
-                  Chapters
-                  <Button
-                    onClick={addChapter}
-                    size="sm"
-                    className="bg-cyan-600 hover:bg-cyan-700"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {bookData.chapters.map((chapter) => (
-                  <div
-                    key={chapter.id}
-                    className={`p-3 rounded cursor-pointer transition-all ${
-                      selectedChapter === chapter.id
-                        ? 'bg-cyan-600/20 border border-cyan-400/40'
-                        : 'bg-slate-700/30 hover:bg-slate-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className="text-slate-200 flex-1"
-                        onClick={() => setSelectedChapter(chapter.id)}
-                      >
-                        {chapter.title}
-                      </span>
-                      <Button
-                        onClick={() => deleteChapter(chapter.id)}
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-400 hover:text-red-300 p-1"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {bookData.chapters.length === 0 && (
-                  <p className="text-slate-400 text-center py-4">
-                    No chapters yet. Click + to add one.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+        <Tabs defaultValue="editor" className="space-y-6">
+          <TabsList className="bg-slate-800/50 border-cyan-400/30">
+            <TabsTrigger value="editor" className="data-[state=active]:bg-cyan-600/20">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Editor
+            </TabsTrigger>
+            <TabsTrigger value="metadata" className="data-[state=active]:bg-cyan-600/20">
+              <Settings className="w-4 h-4 mr-2" />
+              Book Details
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Editor */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="lg:col-span-3"
-          >
-            <Card className="bg-slate-800/50 border-cyan-400/30">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <Input
-                    value={currentChapter?.title || ''}
-                    onChange={(e) => updateChapter(selectedChapter, 'title', e.target.value)}
-                    placeholder="Chapter Title"
-                    className="text-xl font-bold bg-transparent border-none text-cyan-100 placeholder-slate-400 p-0 h-auto focus:ring-0"
+          <TabsContent value="editor">
+            <div className="grid lg:grid-cols-4 gap-6">
+              {/* Sidebar */}
+              <div className="lg:col-span-1 space-y-4">
+                {/* Chapters */}
+                <Card className="bg-slate-800/50 border-cyan-400/30">
+                  <CardHeader>
+                    <CardTitle className="text-cyan-100 flex items-center justify-between">
+                      Chapters
+                      <Button
+                        onClick={addChapter}
+                        size="sm"
+                        className="bg-cyan-600 hover:bg-cyan-700"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {bookData.chapters.map((chapter) => (
+                      <div
+                        key={chapter.id}
+                        className={`p-3 rounded cursor-pointer transition-all ${
+                          selectedChapter === chapter.id
+                            ? 'bg-cyan-600/20 border border-cyan-400/40'
+                            : 'bg-slate-700/30 hover:bg-slate-700/50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span
+                            className="text-slate-200 flex-1"
+                            onClick={() => setSelectedChapter(chapter.id)}
+                          >
+                            {chapter.title}
+                          </span>
+                          <Button
+                            onClick={() => deleteChapter(chapter.id)}
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-400 hover:text-red-300 p-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {bookData.chapters.length === 0 && (
+                      <p className="text-slate-400 text-center py-4">
+                        No chapters yet. Click + to add one.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Book Stats */}
+                <BookStats chapters={bookData.chapters} />
+              </div>
+
+              {/* Editor */}
+              <div className="lg:col-span-3">
+                <Card className="bg-slate-800/50 border-cyan-400/30">
+                  <CardHeader>
+                    <Input
+                      value={currentChapter?.title || ''}
+                      onChange={(e) => updateChapter(selectedChapter, 'title', e.target.value)}
+                      placeholder="Chapter Title"
+                      className="text-xl font-bold bg-transparent border-none text-cyan-100 placeholder-slate-400 p-0 h-auto focus:ring-0"
+                    />
+                  </CardHeader>
+                  
+                  {/* Advanced Toolbar */}
+                  <AdvancedToolbar
+                    onFormat={formatText}
+                    onImageInsert={handleImageInsert}
+                    onFontChange={handleFontChange}
+                    onFontSizeChange={handleFontSizeChange}
+                    onColorChange={handleColorChange}
                   />
-                </div>
-                
-                {/* Formatting Toolbar */}
-                <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-700">
-                  <Button
-                    onClick={() => formatText('bold')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-300 hover:text-white hover:bg-slate-700"
-                  >
-                    <Bold className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={() => formatText('italic')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-300 hover:text-white hover:bg-slate-700"
-                  >
-                    <Italic className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={() => formatText('underline')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-300 hover:text-white hover:bg-slate-700"
-                  >
-                    <Underline className="w-4 h-4" />
-                  </Button>
-                  <div className="w-px h-6 bg-slate-600 mx-2" />
-                  <Button
-                    onClick={() => formatText('justifyLeft')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-300 hover:text-white hover:bg-slate-700"
-                  >
-                    <AlignLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={() => formatText('justifyCenter')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-300 hover:text-white hover:bg-slate-700"
-                  >
-                    <AlignCenter className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={() => formatText('justifyRight')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-300 hover:text-white hover:bg-slate-700"
-                  >
-                    <AlignRight className="w-4 h-4" />
-                  </Button>
-                  <div className="w-px h-6 bg-slate-600 mx-2" />
-                  <Button
-                    onClick={() => formatText('insertUnorderedList')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-300 hover:text-white hover:bg-slate-700"
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={() => formatText('insertOrderedList')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-300 hover:text-white hover:bg-slate-700"
-                  >
-                    <ListOrdered className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={() => formatText('formatBlock', 'blockquote')}
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-300 hover:text-white hover:bg-slate-700"
-                  >
-                    <Quote className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div
-                  ref={editorRef}
-                  contentEditable
-                  className="min-h-[500px] p-4 bg-slate-900/30 rounded-lg border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
-                  style={{ lineHeight: '1.6' }}
-                  dangerouslySetInnerHTML={{ __html: currentChapter?.content || '' }}
-                  onBlur={() => {
-                    if (editorRef.current) {
-                      updateChapter(selectedChapter, 'content', editorRef.current.innerHTML);
-                    }
-                  }}
-                  suppressContentEditableWarning={true}
-                />
-                {!currentChapter && (
-                  <div className="text-center text-slate-400 py-20">
-                    <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p>Select a chapter to start writing</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+                  
+                  <CardContent>
+                    <div
+                      ref={editorRef}
+                      contentEditable
+                      className="min-h-[500px] p-4 bg-slate-900/30 rounded-lg border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
+                      style={{ lineHeight: '1.6' }}
+                      dangerouslySetInnerHTML={{ __html: currentChapter?.content || '' }}
+                      onBlur={() => {
+                        if (editorRef.current) {
+                          updateChapter(selectedChapter, 'content', editorRef.current.innerHTML);
+                        }
+                      }}
+                      suppressContentEditableWarning={true}
+                    />
+                    {!currentChapter && (
+                      <div className="text-center text-slate-400 py-20">
+                        <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                        <p>Select a chapter to start writing</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="metadata">
+            <BookMetadata 
+              metadata={{
+                title: bookData.title,
+                author: bookData.author,
+                description: bookData.description,
+                ...bookData.metadata
+              }}
+              onMetadataChange={handleMetadataChange}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Flipbook Preview Modal */}
