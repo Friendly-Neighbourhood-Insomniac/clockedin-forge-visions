@@ -323,10 +323,10 @@ const EnhancedToolbar: React.FC = () => {
                   />
                   <div className="text-xs text-slate-400 space-y-1">
                     <div><strong>Examples:</strong></div>
-                    <div>• Quadratic formula: x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}</div>
-                    <div>• Integral: \int_0^1 x^2 dx</div>
-                    <div>• Summation: \sum_{i=1}^n x_i</div>
-                    <div>• Matrix: \begin{pmatrix} a & b \\ c & d \end{pmatrix}</div>
+                    <div>• Quadratic formula: {'x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}'}</div>
+                    <div>• Integral: {'\\int_0^1 x^2 dx'}</div>
+                    <div>• Summation: {'\\sum_{i=1}^n x_i'}</div>
+                    <div>• Matrix: {'\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}'}</div>
                   </div>
                   <Button onClick={insertMathEquation} className="bg-cyan-600 hover:bg-cyan-700">
                     Insert Equation
