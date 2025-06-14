@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Download, FileText, Eye, Save, Plus, Trash2, BookOpen, Settings } from 'lucide-react';
@@ -11,6 +10,7 @@ import FlipbookPreview from '@/components/FlipbookPreview';
 import BookMetadata from '@/components/BookMetadata';
 import AdvancedToolbar from '@/components/AdvancedToolbar';
 import BookStats from '@/components/BookStats';
+import { convertEmbedsToQRCodes } from '@/utils/qrCodeGenerator';
 
 interface Chapter {
   id: string;
@@ -139,6 +139,22 @@ const BookEditor = () => {
     }
   };
 
+  const handleEmbedInsert = (embedData: { url: string; title: string; type: 'video' | 'website' }) => {
+    const embedHtml = `
+      <div class="embed-container" data-url="${embedData.url}" data-title="${embedData.title}" data-type="${embedData.type}" style="margin: 20px 0; padding: 15px; border: 2px solid #e2e8f0; border-radius: 8px; background: #f8fafc;">
+        <h4 style="margin-bottom: 10px; color: #334155;">${embedData.title}</h4>
+        <iframe src="${embedData.url}" width="100%" height="315" frameborder="0" allowfullscreen style="border-radius: 4px;"></iframe>
+        <p style="font-size: 12px; color: #64748b; margin-top: 8px;">🔗 ${embedData.type === 'video' ? 'Video' : 'Website'} Embed</p>
+      </div>
+    `;
+    
+    document.execCommand('insertHTML', false, embedHtml);
+    if (editorRef.current) {
+      const content = editorRef.current.innerHTML;
+      updateChapter(selectedChapter, 'content', content);
+    }
+  };
+
   const handleMetadataChange = (field: string, value: string) => {
     if (field === 'title' || field === 'author' || field === 'description') {
       setBookData(prev => ({ ...prev, [field]: value }));
@@ -179,6 +195,14 @@ const BookEditor = () => {
   };
 
   const downloadPDF = async () => {
+    // Convert embeds to QR codes for PDF
+    const chaptersWithQRCodes = await Promise.all(
+      bookData.chapters.map(async (chapter) => ({
+        ...chapter,
+        content: await convertEmbedsToQRCodes(chapter.content)
+      }))
+    );
+
     // Enhanced HTML with better styling for PDF
     const htmlContent = `
       <!DOCTYPE html>
@@ -237,6 +261,9 @@ const BookEditor = () => {
               display: block;
               margin: 20px auto;
             }
+            .qr-code-container {
+              page-break-inside: avoid;
+            }
           </style>
         </head>
         <body>
@@ -250,7 +277,7 @@ const BookEditor = () => {
               ${bookData.metadata.publisher ? `<p>Publisher: ${bookData.metadata.publisher}</p>` : ''}
             </div>
           </div>
-          ${bookData.chapters.map(chapter => `
+          ${chaptersWithQRCodes.map(chapter => `
             <div class="chapter">
               <h2>${chapter.title}</h2>
               <div>${chapter.content}</div>
@@ -272,7 +299,7 @@ const BookEditor = () => {
 
     toast({
       title: "Book Downloaded",
-      description: "Your book has been downloaded as an HTML file that can be converted to PDF.",
+      description: "Your book has been downloaded with embeds converted to QR codes for mobile access.",
     });
   };
 
@@ -409,6 +436,7 @@ const BookEditor = () => {
                   <AdvancedToolbar
                     onFormat={formatText}
                     onImageInsert={handleImageInsert}
+                    onEmbedInsert={handleEmbedInsert}
                     onFontChange={handleFontChange}
                     onFontSizeChange={handleFontSizeChange}
                     onColorChange={handleColorChange}

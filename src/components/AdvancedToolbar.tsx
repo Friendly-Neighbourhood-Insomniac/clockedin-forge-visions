@@ -2,12 +2,28 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Quote, Type, Palette } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Bold, 
+  Italic, 
+  Underline, 
+  AlignLeft, 
+  AlignCenter, 
+  AlignRight,
+  List,
+  ListOrdered,
+  Quote,
+  Link,
+  Type,
+  Palette
+} from 'lucide-react';
 import ImageUpload from './ImageUpload';
+import EmbedInsert from './EmbedInsert';
 
 interface AdvancedToolbarProps {
   onFormat: (command: string, value?: string) => void;
   onImageInsert: (imageUrl: string) => void;
+  onEmbedInsert: (embedData: { url: string; title: string; type: 'video' | 'website' }) => void;
   onFontChange: (font: string) => void;
   onFontSizeChange: (size: string) => void;
   onColorChange: (color: string) => void;
@@ -16,162 +32,175 @@ interface AdvancedToolbarProps {
 const AdvancedToolbar: React.FC<AdvancedToolbarProps> = ({
   onFormat,
   onImageInsert,
+  onEmbedInsert,
   onFontChange,
   onFontSizeChange,
-  onColorChange
+  onColorChange,
 }) => {
-  const colors = [
-    { name: 'Black', value: '#000000' },
-    { name: 'Blue', value: '#3b82f6' },
-    { name: 'Red', value: '#ef4444' },
-    { name: 'Green', value: '#10b981' },
-    { name: 'Purple', value: '#8b5cf6' },
-    { name: 'Orange', value: '#f97316' },
+  const fonts = [
+    'Arial', 'Georgia', 'Times New Roman', 'Helvetica', 'Verdana', 
+    'Trebuchet MS', 'Comic Sans MS', 'Impact', 'Courier New'
   ];
 
+  const fontSizes = ['1', '2', '3', '4', '5', '6', '7'];
+  const colors = ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080', '#008000'];
+
   return (
-    <div className="flex flex-wrap gap-2 p-4 border-t border-slate-700 bg-slate-800/30">
-      {/* Font Family */}
-      <Select onValueChange={onFontChange}>
-        <SelectTrigger className="w-40 bg-slate-700/50 border-slate-600 text-white">
-          <SelectValue placeholder="Font" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="Arial">Arial</SelectItem>
-          <SelectItem value="Georgia">Georgia</SelectItem>
-          <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-          <SelectItem value="Helvetica">Helvetica</SelectItem>
-          <SelectItem value="Garamond">Garamond</SelectItem>
-          <SelectItem value="Palatino">Palatino</SelectItem>
-        </SelectContent>
-      </Select>
+    <div className="border-b border-slate-700 p-3 bg-slate-800/30">
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Font Controls */}
+        <Select onValueChange={onFontChange}>
+          <SelectTrigger className="w-32 bg-slate-700 border-slate-600 text-slate-200">
+            <SelectValue placeholder="Font" />
+          </SelectTrigger>
+          <SelectContent className="bg-slate-700 border-slate-600">
+            {fonts.map((font) => (
+              <SelectItem key={font} value={font} className="text-slate-200 hover:bg-slate-600">
+                {font}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      {/* Font Size */}
-      <Select onValueChange={onFontSizeChange}>
-        <SelectTrigger className="w-20 bg-slate-700/50 border-slate-600 text-white">
-          <SelectValue placeholder="Size" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="1">8pt</SelectItem>
-          <SelectItem value="2">10pt</SelectItem>
-          <SelectItem value="3">12pt</SelectItem>
-          <SelectItem value="4">14pt</SelectItem>
-          <SelectItem value="5">18pt</SelectItem>
-          <SelectItem value="6">24pt</SelectItem>
-          <SelectItem value="7">36pt</SelectItem>
-        </SelectContent>
-      </Select>
+        <Select onValueChange={onFontSizeChange}>
+          <SelectTrigger className="w-16 bg-slate-700 border-slate-600 text-slate-200">
+            <SelectValue placeholder="Size" />
+          </SelectTrigger>
+          <SelectContent className="bg-slate-700 border-slate-600">
+            {fontSizes.map((size) => (
+              <SelectItem key={size} value={size} className="text-slate-200 hover:bg-slate-600">
+                {size}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <div className="w-px h-6 bg-slate-600 mx-2" />
+        <Separator orientation="vertical" className="h-6 bg-slate-600" />
 
-      {/* Basic Formatting */}
-      <Button
-        onClick={() => onFormat('bold')}
-        size="sm"
-        variant="ghost"
-        className="text-slate-300 hover:text-white hover:bg-slate-700"
-      >
-        <Bold className="w-4 h-4" />
-      </Button>
-      <Button
-        onClick={() => onFormat('italic')}
-        size="sm"
-        variant="ghost"
-        className="text-slate-300 hover:text-white hover:bg-slate-700"
-      >
-        <Italic className="w-4 h-4" />
-      </Button>
-      <Button
-        onClick={() => onFormat('underline')}
-        size="sm"
-        variant="ghost"
-        className="text-slate-300 hover:text-white hover:bg-slate-700"
-      >
-        <Underline className="w-4 h-4" />
-      </Button>
+        {/* Text Formatting */}
+        <Button
+          onClick={() => onFormat('bold')}
+          size="sm"
+          variant="ghost"
+          className="text-slate-300 hover:text-white hover:bg-slate-700"
+        >
+          <Bold className="w-4 h-4" />
+        </Button>
 
-      <div className="w-px h-6 bg-slate-600 mx-2" />
+        <Button
+          onClick={() => onFormat('italic')}
+          size="sm"
+          variant="ghost"
+          className="text-slate-300 hover:text-white hover:bg-slate-700"
+        >
+          <Italic className="w-4 h-4" />
+        </Button>
 
-      {/* Text Color */}
-      <Select onValueChange={onColorChange}>
-        <SelectTrigger className="w-20 bg-slate-700/50 border-slate-600 text-white">
-          <SelectValue placeholder={<Palette className="w-4 h-4" />} />
-        </SelectTrigger>
-        <SelectContent>
+        <Button
+          onClick={() => onFormat('underline')}
+          size="sm"
+          variant="ghost"
+          className="text-slate-300 hover:text-white hover:bg-slate-700"
+        >
+          <Underline className="w-4 h-4" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-6 bg-slate-600" />
+
+        {/* Alignment */}
+        <Button
+          onClick={() => onFormat('justifyLeft')}
+          size="sm"
+          variant="ghost"
+          className="text-slate-300 hover:text-white hover:bg-slate-700"
+        >
+          <AlignLeft className="w-4 h-4" />
+        </Button>
+
+        <Button
+          onClick={() => onFormat('justifyCenter')}
+          size="sm"
+          variant="ghost"
+          className="text-slate-300 hover:text-white hover:bg-slate-700"
+        >
+          <AlignCenter className="w-4 h-4" />
+        </Button>
+
+        <Button
+          onClick={() => onFormat('justifyRight')}
+          size="sm"
+          variant="ghost"
+          className="text-slate-300 hover:text-white hover:bg-slate-700"
+        >
+          <AlignRight className="w-4 h-4" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-6 bg-slate-600" />
+
+        {/* Lists */}
+        <Button
+          onClick={() => onFormat('insertUnorderedList')}
+          size="sm"
+          variant="ghost"
+          className="text-slate-300 hover:text-white hover:bg-slate-700"
+        >
+          <List className="w-4 h-4" />
+        </Button>
+
+        <Button
+          onClick={() => onFormat('insertOrderedList')}
+          size="sm"
+          variant="ghost"
+          className="text-slate-300 hover:text-white hover:bg-slate-700"
+        >
+          <ListOrdered className="w-4 h-4" />
+        </Button>
+
+        <Button
+          onClick={() => onFormat('formatBlock', 'blockquote')}
+          size="sm"
+          variant="ghost"
+          className="text-slate-300 hover:text-white hover:bg-slate-700"
+        >
+          <Quote className="w-4 h-4" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-6 bg-slate-600" />
+
+        {/* Color Picker */}
+        <div className="flex items-center gap-1">
+          <Palette className="w-4 h-4 text-slate-300" />
           {colors.map((color) => (
-            <SelectItem key={color.value} value={color.value}>
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-4 h-4 rounded border"
-                  style={{ backgroundColor: color.value }}
-                />
-                {color.name}
-              </div>
-            </SelectItem>
+            <button
+              key={color}
+              onClick={() => onColorChange(color)}
+              className="w-4 h-4 rounded border border-slate-600 hover:scale-110 transition-transform"
+              style={{ backgroundColor: color }}
+              title={`Color: ${color}`}
+            />
           ))}
-        </SelectContent>
-      </Select>
+        </div>
 
-      <div className="w-px h-6 bg-slate-600 mx-2" />
+        <Separator orientation="vertical" className="h-6 bg-slate-600" />
 
-      {/* Alignment */}
-      <Button
-        onClick={() => onFormat('justifyLeft')}
-        size="sm"
-        variant="ghost"
-        className="text-slate-300 hover:text-white hover:bg-slate-700"
-      >
-        <AlignLeft className="w-4 h-4" />
-      </Button>
-      <Button
-        onClick={() => onFormat('justifyCenter')}
-        size="sm"
-        variant="ghost"
-        className="text-slate-300 hover:text-white hover:bg-slate-700"
-      >
-        <AlignCenter className="w-4 h-4" />
-      </Button>
-      <Button
-        onClick={() => onFormat('justifyRight')}
-        size="sm"
-        variant="ghost"
-        className="text-slate-300 hover:text-white hover:bg-slate-700"
-      >
-        <AlignRight className="w-4 h-4" />
-      </Button>
+        {/* Media */}
+        <ImageUpload onImageInsert={onImageInsert} />
+        <EmbedInsert onEmbedInsert={onEmbedInsert} />
 
-      <div className="w-px h-6 bg-slate-600 mx-2" />
-
-      {/* Lists */}
-      <Button
-        onClick={() => onFormat('insertUnorderedList')}
-        size="sm"
-        variant="ghost"
-        className="text-slate-300 hover:text-white hover:bg-slate-700"
-      >
-        <List className="w-4 h-4" />
-      </Button>
-      <Button
-        onClick={() => onFormat('insertOrderedList')}
-        size="sm"
-        variant="ghost"
-        className="text-slate-300 hover:text-white hover:bg-slate-700"
-      >
-        <ListOrdered className="w-4 h-4" />
-      </Button>
-      <Button
-        onClick={() => onFormat('formatBlock', 'blockquote')}
-        size="sm"
-        variant="ghost"
-        className="text-slate-300 hover:text-white hover:bg-slate-700"
-      >
-        <Quote className="w-4 h-4" />
-      </Button>
-
-      <div className="w-px h-6 bg-slate-600 mx-2" />
-
-      {/* Image Upload */}
-      <ImageUpload onImageInsert={onImageInsert} />
+        <Button
+          onClick={() => {
+            const url = prompt('Enter link URL:');
+            if (url) {
+              onFormat('createLink', url);
+            }
+          }}
+          size="sm"
+          variant="ghost"
+          className="text-slate-300 hover:text-white hover:bg-slate-700"
+        >
+          <Link className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 };
