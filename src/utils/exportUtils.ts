@@ -118,33 +118,8 @@ export const exportToEPUB = async (bookData: BookData): Promise<Blob> => {
       }))
     );
 
-    const EPub = (await import('epub-gen')).default;
-    
-    const options = {
-      title: bookData.title,
-      author: bookData.author,
-      description: bookData.description,
-      publisher: 'BookForge',
-      cover: undefined, // We can add cover image support later
-      content: processedChapters.map(chapter => ({
-        title: chapter.title,
-        data: chapter.content || '<p>No content available</p>'
-      }))
-    };
-
-    const epubBuffer = await new Promise<Buffer>((resolve, reject) => {
-      new EPub(options, './temp.epub')
-        .promise.then(() => {
-          // Since we can't write files in browser, we'll need to handle this differently
-          // For now, we'll create a simple HTML-based EPUB structure
-          const epubContent = createSimpleEPUB(bookData, processedChapters);
-          const buffer = Buffer.from(epubContent, 'utf8');
-          resolve(buffer);
-        })
-        .catch(reject);
-    });
-
-    return new Blob([epubBuffer], { type: 'application/epub+zip' });
+    // Fallback to HTML export since epub-gen has browser compatibility issues
+    return exportToHTML(bookData);
   } catch (error) {
     console.error('Error creating EPUB:', error);
     // Fallback to HTML export
@@ -153,37 +128,35 @@ export const exportToEPUB = async (bookData: BookData): Promise<Blob> => {
 };
 
 const createSimpleEPUB = (bookData: BookData, chapters: Chapter[]): string => {
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>${bookData.title}</title>
-      <style>
-        body { font-family: Georgia, serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .cover { text-align: center; page-break-after: always; }
-        .cover h1 { font-size: 2.5em; margin-bottom: 0.5em; }
-        .cover .author { font-size: 1.2em; color: #666; margin-bottom: 1em; }
-        .cover .description { font-style: italic; color: #888; }
-        .chapter { page-break-before: always; }
-        .chapter h2 { border-bottom: 2px solid #06b6d4; padding-bottom: 10px; }
-      </style>
-    </head>
-    <body>
-      <div class="cover">
-        <h1>${bookData.title}</h1>
-        <div class="author">by ${bookData.author}</div>
-        <div class="description">${bookData.description}</div>
-      </div>
-      ${chapters.map(chapter => `
-        <div class="chapter">
-          <h2>${chapter.title}</h2>
-          <div>${chapter.content || '<p>No content available</p>'}</div>
-        </div>
-      `).join('')}
-    </body>
-    </html>
-  `;
+  const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${bookData.title}</title>
+  <style>
+    body { font-family: Georgia, serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .cover { text-align: center; page-break-after: always; }
+    .cover h1 { font-size: 2.5em; margin-bottom: 0.5em; }
+    .cover .author { font-size: 1.2em; color: #666; margin-bottom: 1em; }
+    .cover .description { font-style: italic; color: #888; }
+    .chapter { page-break-before: always; }
+    .chapter h2 { border-bottom: 2px solid #06b6d4; padding-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="cover">
+    <h1>${bookData.title}</h1>
+    <div class="author">by ${bookData.author}</div>
+    <div class="description">${bookData.description}</div>
+  </div>
+  ${chapters.map(chapter => `
+    <div class="chapter">
+      <h2>${chapter.title}</h2>
+      <div>${chapter.content || '<p>No content available</p>'}</div>
+    </div>
+  `).join('')}
+</body>
+</html>`;
   return htmlContent;
 };
 
