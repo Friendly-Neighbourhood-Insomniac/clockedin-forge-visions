@@ -17,6 +17,14 @@ interface EditorStoreState {
   loadContent: (content: string) => void;
   getContentAsHTML: () => string;
   getContentAsJSON: () => any;
+  
+  // New professional features
+  insertMath: (expression: string) => void;
+  insertTable: (rows: number, cols: number) => void;
+  setFontFamily: (font: string) => void;
+  setFontSize: (size: string) => void;
+  setTextColor: (color: string) => void;
+  toggleHighlight: (color?: string) => void;
 }
 
 export const useEditorStore = create<EditorStoreState>((set, get) => ({
@@ -82,5 +90,52 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
   getContentAsJSON: () => {
     const { editor } = get();
     return editor ? editor.getJSON() : null;
+  },
+
+  // New professional features
+  insertMath: (expression) => {
+    const { editor } = get();
+    if (editor) {
+      editor.commands.insertMath(expression);
+    }
+  },
+
+  insertTable: (rows, cols) => {
+    const { editor } = get();
+    if (editor) {
+      editor.commands.insertTable({ rows, cols, withHeaderRow: true });
+    }
+  },
+
+  setFontFamily: (font) => {
+    const { editor } = get();
+    if (editor) {
+      editor.commands.setFontFamily(font);
+    }
+  },
+
+  setFontSize: (size) => {
+    const { editor } = get();
+    if (editor) {
+      editor.commands.setFontSize(size);
+    }
+  },
+
+  setTextColor: (color) => {
+    const { editor } = get();
+    if (editor) {
+      editor.commands.setColor(color);
+    }
+  },
+
+  toggleHighlight: (color) => {
+    const { editor } = get();
+    if (editor) {
+      if (color) {
+        editor.commands.toggleHighlight({ color });
+      } else {
+        editor.commands.toggleHighlight();
+      }
+    }
   }
 }));

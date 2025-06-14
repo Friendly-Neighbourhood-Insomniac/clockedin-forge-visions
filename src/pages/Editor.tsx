@@ -3,7 +3,7 @@ import { useChapterTreeStore } from '@/stores/chapterTreeStore';
 import { useBookMetadataStore } from '@/stores/bookMetadataStore';
 import { useEditorStore } from '@/stores/editorStore';
 import TiptapEditor from '@/components/editor/TiptapEditor';
-import EditorToolbar from '@/components/editor/EditorToolbar';
+import EnhancedToolbar from '@/components/editor/EnhancedToolbar';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -279,8 +279,8 @@ const Editor: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                {/* Editor Toolbar */}
-                <EditorToolbar />
+                {/* Enhanced Editor Toolbar */}
+                <EnhancedToolbar />
 
                 {/* Tiptap Editor */}
                 <TiptapEditor
