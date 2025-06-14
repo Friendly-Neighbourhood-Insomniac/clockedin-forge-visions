@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Settings, Download } from 'lucide-react';
@@ -8,13 +7,13 @@ import { useBookMetadataStore } from '@/stores/bookMetadataStore';
 import { useChapterTreeStore } from '@/stores/chapterTreeStore';
 
 const Preview: React.FC = () => {
-  const { title, author, description } = useBookMetadataStore();
+  const { metadata } = useBookMetadataStore();
   const { chapters } = useChapterTreeStore();
 
   const bookData = {
-    title: title || 'Untitled Book',
-    author: author || 'Unknown Author',
-    description: description || 'No description available',
+    title: metadata.title || 'Untitled Book',
+    author: metadata.author || 'Unknown Author',
+    description: metadata.description || 'No description available',
     chapters: chapters.map(chapter => ({
       id: chapter.id,
       title: chapter.title,

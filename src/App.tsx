@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import BookEditor from "./pages/BookEditor";
 import Editor from "./pages/Editor";
 import Preview from "./pages/Preview";
+import Export from "./pages/Export";
+import Print from "./pages/Print";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +24,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/editor" element={<Editor />} />
           <Route path="/preview" element={<Preview />} />
+          <Route path="/export" element={<Export />} />
+          <Route path="/print" element={<Print />} />
           <Route path="/legacy-editor" element={<BookEditor />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
