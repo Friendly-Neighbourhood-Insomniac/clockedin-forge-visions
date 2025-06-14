@@ -29,7 +29,7 @@ const EnhancedImageUpload: React.FC<EnhancedImageUploadProps> = ({ onImageInsert
         const imageUrl = e.target?.result as string;
         
         // Create a temporary image to get dimensions
-        const img = new Image();
+        const img = document.createElement('img');
         img.onload = () => {
           const maxWidth = 600;
           const aspectRatio = img.height / img.width;

@@ -10,6 +10,7 @@ import FlipbookPreview from '@/components/FlipbookPreview';
 import BookMetadata from '@/components/BookMetadata';
 import AdvancedToolbar from '@/components/AdvancedToolbar';
 import BookStats from '@/components/BookStats';
+import MediaEditor from '@/components/MediaEditor';
 import { convertEmbedsToQRCodes } from '@/utils/qrCodeGenerator';
 
 interface Chapter {
@@ -53,6 +54,9 @@ const BookEditor = () => {
       keywords: ''
     }
   });
+
+  // Get current chapter early to avoid "used before declaration" error
+  const currentChapter = bookData.chapters.find(ch => ch.id === selectedChapter);
 
   // Load data from localStorage on component mount
   useEffect(() => {
@@ -380,8 +384,6 @@ const BookEditor = () => {
   const openFlipbookPreview = () => {
     setIsFlipbookOpen(true);
   };
-
-  const currentChapter = bookData.chapters.find(ch => ch.id === selectedChapter);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-amber-900">
