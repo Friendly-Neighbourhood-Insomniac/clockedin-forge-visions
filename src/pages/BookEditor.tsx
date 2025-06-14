@@ -9,7 +9,6 @@ import MediaEditor from '@/components/MediaEditor';
 import ChapterManager from '@/components/ChapterManager';
 import TextEditor from '@/components/TextEditor';
 import BookEditorHeader from '@/components/BookEditorHeader';
-import { useMediaEditor } from '@/hooks/useMediaEditor';
 import { convertEmbedsToQRCodes } from '@/utils/qrCodeGenerator';
 
 interface Chapter {
@@ -62,12 +61,6 @@ const BookEditor = () => {
       updateChapter(selectedChapter, 'content', content);
     }
   };
-
-  const { setupMediaEventListeners } = useMediaEditor({
-    editorRef,
-    onMediaEditorOpen: setMediaEditor,
-    onContentSync: syncEditorContent
-  });
 
   // Load data from localStorage on component mount
   useEffect(() => {
@@ -344,7 +337,7 @@ const BookEditor = () => {
                   onFontChange={handleFontChange}
                   onFontSizeChange={handleFontSizeChange}
                   onColorChange={handleColorChange}
-                  onSetupMediaListeners={setupMediaEventListeners}
+                  onSetupMediaListeners={() => {}} // No longer needed
                 />
               </div>
             </div>
