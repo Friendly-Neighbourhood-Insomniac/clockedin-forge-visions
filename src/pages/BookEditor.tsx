@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Settings } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -144,78 +143,6 @@ const BookEditor = () => {
     formatText('foreColor', color);
   };
 
-  const handleImageInsert = (imageUrl: string, metadata?: { width?: string; height?: string; alt?: string }) => {
-    const img = `<img 
-      src="${imageUrl}" 
-      alt="${metadata?.alt || 'Inserted image'}" 
-      style="
-        max-width: 100%; 
-        height: auto; 
-        margin: 10px; 
-        cursor: pointer; 
-        border: 2px solid transparent;
-        transition: all 0.2s ease;
-        ${metadata?.width ? `width: ${metadata.width};` : 'width: 300px;'}
-        ${metadata?.height ? `height: ${metadata.height};` : ''}
-      " 
-      class="editable-media"
-      data-media-type="image"
-      draggable="true"
-    />`;
-    
-    document.execCommand('insertHTML', false, img);
-    syncEditorContent();
-    
-    // Setup event listeners for the new image
-    setTimeout(() => {
-      setupMediaEventListeners();
-    }, 100);
-  };
-
-  const handleEmbedInsert = (embedData: { url: string; title: string; type: 'video' | 'website' }) => {
-    const embedHtml = `
-      <div class="embed-container editable-media" 
-           data-url="${embedData.url}" 
-           data-title="${embedData.title}" 
-           data-type="${embedData.type}" 
-           data-media-type="embed"
-           draggable="true"
-           style="
-             margin: 20px 0; 
-             padding: 15px; 
-             border: 2px solid transparent; 
-             border-radius: 8px; 
-             background: #f8fafc;
-             cursor: pointer;
-             transition: all 0.2s ease;
-             position: relative;
-             max-width: 100%;
-             width: 400px;
-           "
-      >
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h4 style="margin: 0; color: #334155; flex: 1; font-size: 16px;">${embedData.title}</h4>
-          <span style="font-size: 10px; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">DOUBLE-CLICK TO EDIT</span>
-        </div>
-        <div style="background: #e2e8f0; padding: 40px; text-align: center; border-radius: 4px; color: #64748b;">
-          <p style="margin: 0; font-size: 14px;">📺 ${embedData.type === 'video' ? 'Video' : 'Website'} Embed</p>
-          <p style="margin: 5px 0 0 0; font-size: 12px;">${embedData.url}</p>
-        </div>
-        <div style="position: absolute; top: 5px; right: 5px; background: rgba(6, 182, 212, 0.1); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: #0891b2;">
-          DRAG TO MOVE
-        </div>
-      </div>
-    `;
-    
-    document.execCommand('insertHTML', false, embedHtml);
-    syncEditorContent();
-    
-    // Setup event listeners for the new embed
-    setTimeout(() => {
-      setupMediaEventListeners();
-    }, 100);
-  };
-
   const handleMediaUpdate = (element: HTMLElement) => {
     syncEditorContent();
   };
@@ -232,7 +159,6 @@ const BookEditor = () => {
   };
 
   const generateEPUB = () => {
-    // Create EPUB-like structure
     const epubContent = {
       metadata: {
         title: bookData.title,
@@ -260,7 +186,6 @@ const BookEditor = () => {
   };
 
   const downloadPDF = async () => {
-    // Convert embeds to QR codes for PDF
     const chaptersWithQRCodes = await Promise.all(
       bookData.chapters.map(async (chapter) => ({
         ...chapter,
@@ -268,7 +193,6 @@ const BookEditor = () => {
       }))
     );
 
-    // Enhanced HTML with better styling for PDF
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -397,7 +321,6 @@ const BookEditor = () => {
 
           <TabsContent value="editor">
             <div className="grid lg:grid-cols-4 gap-6">
-              {/* Sidebar */}
               <div className="lg:col-span-1 space-y-4">
                 <ChapterManager
                   chapters={bookData.chapters}
@@ -410,14 +333,13 @@ const BookEditor = () => {
                 <BookStats chapters={bookData.chapters} />
               </div>
 
-              {/* Editor */}
               <div className="lg:col-span-3 relative">
                 <TextEditor
                   currentChapter={currentChapter}
                   selectedChapter={selectedChapter}
                   onUpdateChapter={updateChapter}
-                  onImageInsert={handleImageInsert}
-                  onEmbedInsert={handleEmbedInsert}
+                  onImageInsert={() => {}} // Handled internally by TextEditor
+                  onEmbedInsert={() => {}} // Handled internally by TextEditor
                   onFormatText={formatText}
                   onFontChange={handleFontChange}
                   onFontSizeChange={handleFontSizeChange}
@@ -442,7 +364,6 @@ const BookEditor = () => {
         </Tabs>
       </div>
 
-      {/* Media Editor */}
       {mediaEditor && (
         <MediaEditor
           element={mediaEditor.element}
@@ -452,7 +373,6 @@ const BookEditor = () => {
         />
       )}
 
-      {/* Flipbook Preview Modal */}
       <FlipbookPreview
         isOpen={isFlipbookOpen}
         onClose={() => setIsFlipbookOpen(false)}
