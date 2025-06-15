@@ -2,7 +2,7 @@
 import React from 'react';
 import { Editor } from '@tiptap/react';
 import { Button } from '@/components/ui/button';
-import { Bold, Italic, Underline, Link, Highlight } from 'lucide-react';
+import { Bold, Italic, Underline, Link, Highlighter } from 'lucide-react';
 
 interface FloatingToolbarProps {
   editor: Editor | null;
@@ -44,7 +44,7 @@ const FloatingToolbar: React.FC<FloatingToolbarProps> = ({ editor, show, positio
       title: 'Add Link (Ctrl+K)'
     },
     {
-      icon: Highlight,
+      icon: Highlighter,
       action: () => editor.chain().focus().toggleHighlight().run(),
       isActive: editor.isActive('highlight'),
       title: 'Highlight'
