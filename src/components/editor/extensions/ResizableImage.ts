@@ -1,7 +1,6 @@
 
 import { Node, nodeInputRule } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { NodeViewRenderer } from '@tiptap/react';
 
 export interface ResizableImageOptions {
   inline: boolean;
@@ -18,6 +17,94 @@ declare module '@tiptap/core' {
 }
 
 const inputRegex = /(?:^|\s)(!\[(.+|:?)]\((\S+)(?:(?:\s+)["'](\S+)["'])?\))$/;
+
+// Create the NodeView component
+const ResizableImageNodeView = ({ node, updateAttributes, selected }: any) => {
+  const { src, alt, title, width, height } = node.attrs;
+  
+  const handleMouseDown = (e: React.MouseEvent, direction: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = width || 300;
+    const startHeight = height || 200;
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+      
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+      
+      switch (direction) {
+        case 'se':
+          newWidth = Math.max(50, startWidth + deltaX);
+          newHeight = Math.max(50, startHeight + deltaY);
+          break;
+        case 'sw':
+          newWidth = Math.max(50, startWidth - deltaX);
+          newHeight = Math.max(50, startHeight + deltaY);
+          break;
+        case 'ne':
+          newWidth = Math.max(50, startWidth + deltaX);
+          newHeight = Math.max(50, startHeight - deltaY);
+          break;
+        case 'nw':
+          newWidth = Math.max(50, startWidth - deltaX);
+          newHeight = Math.max(50, startHeight - deltaY);
+          break;
+      }
+      
+      updateAttributes({ width: newWidth, height: newHeight });
+    };
+    
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+  
+  return (
+    <div 
+      className={`resizable-image inline-block relative ${selected ? 'ring-2 ring-blue-500' : ''}`}
+      style={{ width: width || 'auto', height: height || 'auto' }}
+    >
+      <img
+        src={src}
+        alt={alt || ''}
+        title={title || ''}
+        className="max-w-full h-auto block"
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      />
+      
+      {selected && (
+        <>
+          <div
+            className="resize-handle resize-handle-nw"
+            onMouseDown={(e) => handleMouseDown(e, 'nw')}
+          />
+          <div
+            className="resize-handle resize-handle-ne"
+            onMouseDown={(e) => handleMouseDown(e, 'ne')}
+          />
+          <div
+            className="resize-handle resize-handle-sw"
+            onMouseDown={(e) => handleMouseDown(e, 'sw')}
+          />
+          <div
+            className="resize-handle resize-handle-se"
+            onMouseDown={(e) => handleMouseDown(e, 'se')}
+          />
+        </>
+      )}
+    </div>
+  );
+};
 
 export const ResizableImage = Node.create<ResizableImageOptions>({
   name: 'resizableImage',
@@ -52,10 +139,10 @@ export const ResizableImage = Node.create<ResizableImageOptions>({
         default: null,
       },
       width: {
-        default: null,
+        default: 300,
       },
       height: {
-        default: null,
+        default: 200,
       },
     };
   },
@@ -64,12 +151,29 @@ export const ResizableImage = Node.create<ResizableImageOptions>({
     return [
       {
         tag: 'img[src]',
+        getAttrs: (element) => {
+          const img = element as HTMLImageElement;
+          return {
+            src: img.getAttribute('src'),
+            alt: img.getAttribute('alt'),
+            title: img.getAttribute('title'),
+            width: img.getAttribute('width') ? parseInt(img.getAttribute('width')!) : 300,
+            height: img.getAttribute('height') ? parseInt(img.getAttribute('height')!) : 200,
+          };
+        },
       },
     ];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['img', { ...this.options.HTMLAttributes, ...HTMLAttributes }];
+    return [
+      'img', 
+      { 
+        ...this.options.HTMLAttributes, 
+        ...HTMLAttributes,
+        style: `width: ${HTMLAttributes.width || 300}px; height: ${HTMLAttributes.height || 200}px;`
+      }
+    ];
   },
 
   addCommands() {
@@ -79,7 +183,11 @@ export const ResizableImage = Node.create<ResizableImageOptions>({
         ({ commands }) => {
           return commands.insertContent({
             type: this.name,
-            attrs: options,
+            attrs: {
+              width: 300,
+              height: 200,
+              ...options,
+            },
           });
         },
     };
@@ -92,54 +200,13 @@ export const ResizableImage = Node.create<ResizableImageOptions>({
         type: this.type,
         getAttributes: (match) => {
           const [, , alt, src, title] = match;
-          return { src, alt, title };
+          return { src, alt, title, width: 300, height: 200 };
         },
       }),
     ];
   },
 
-  addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey('resizableImage'),
-        props: {
-          decorations(state) {
-            const { doc, selection } = state;
-            const decorations: Decoration[] = [];
-
-            doc.descendants((node, pos) => {
-              if (node.type.name === 'resizableImage') {
-                const decoration = Decoration.widget(
-                  pos + 1,
-                  () => {
-                    const img = document.createElement('div');
-                    img.className = 'resizable-image-wrapper';
-                    img.innerHTML = `
-                      <img 
-                        src="${node.attrs.src}" 
-                        alt="${node.attrs.alt || ''}"
-                        style="width: ${node.attrs.width || 'auto'}px; height: ${node.attrs.height || 'auto'}px; max-width: 100%;"
-                        class="resizable-image"
-                      />
-                      <div class="resize-handles">
-                        <div class="resize-handle resize-handle-nw"></div>
-                        <div class="resize-handle resize-handle-ne"></div>
-                        <div class="resize-handle resize-handle-sw"></div>
-                        <div class="resize-handle resize-handle-se"></div>
-                      </div>
-                    `;
-                    return img;
-                  },
-                  { side: 0 }
-                );
-                decorations.push(decoration);
-              }
-            });
-
-            return DecorationSet.create(doc, decorations);
-          },
-        },
-      }),
-    ];
+  addNodeView() {
+    return NodeViewRenderer(ResizableImageNodeView);
   },
 });

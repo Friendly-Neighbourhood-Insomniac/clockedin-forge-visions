@@ -139,41 +139,58 @@
   background: rgba(6, 182, 212, 0.5);
 }
 
-/* Resizable handles styling */
+/* Resizable Image Styles */
+.resizable-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.resizable-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
 .resize-handle {
   position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #0ea5e9;
+  border: 1px solid #ffffff;
+  border-radius: 2px;
   z-index: 10;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.resize-handle:hover {
+  opacity: 1;
+  background: #0284c7;
 }
 
 .resize-handle-nw {
   top: -5px;
   left: -5px;
-  width: 10px;
-  height: 10px;
   cursor: nw-resize;
 }
 
 .resize-handle-ne {
   top: -5px;
   right: -5px;
-  width: 10px;
-  height: 10px;
   cursor: ne-resize;
 }
 
 .resize-handle-sw {
   bottom: -5px;
   left: -5px;
-  width: 10px;
-  height: 10px;
   cursor: sw-resize;
 }
 
 .resize-handle-se {
   bottom: -5px;
   right: -5px;
-  width: 10px;
-  height: 10px;
   cursor: se-resize;
 }
 

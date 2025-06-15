@@ -2,7 +2,6 @@
 import React, { useCallback, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
 import Youtube from '@tiptap/extension-youtube';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
@@ -45,6 +44,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     extensions: [
       StarterKit.configure({
         codeBlock: false, // We'll use CodeBlockLowlight instead
+        // Disable the default image extension since we're using ResizableImage
       }),
       TextStyle,
       Color,
@@ -103,7 +103,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
       onBlur?.();
     },
     onCreate: ({ editor }) => {
-      console.log('Editor created successfully with Mathematics extension');
+      console.log('Editor created successfully with ResizableImage and Mathematics extensions');
     },
   });
 
@@ -143,13 +143,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
               [&_.task-list]:list-none [&_.task-item]:flex [&_.task-item]:items-start
               [&_.math-expression]:bg-gray-50 [&_.math-expression]:p-4 [&_.math-expression]:rounded [&_.math-expression]:my-4 [&_.math-expression]:border
               [&_.katex-display]:margin-0 [&_.katex]:font-size-1 [&_.katex]:color-inherit
-              [&_.resizable-image-wrapper]:relative [&_.resizable-image-wrapper]:inline-block
-              [&_.resize-handles]:absolute [&_.resize-handles]:inset-0 [&_.resize-handles]:pointer-events-none
-              [&_.resize-handle]:absolute [&_.resize-handle]:w-2 [&_.resize-handle]:h-2 [&_.resize-handle]:bg-blue-500 [&_.resize-handle]:pointer-events-auto
-              [&_.resize-handle-nw]:top-0 [&_.resize-handle-nw]:left-0 [&_.resize-handle-nw]:cursor-nw-resize
-              [&_.resize-handle-ne]:top-0 [&_.resize-handle-ne]:right-0 [&_.resize-handle-ne]:cursor-ne-resize
-              [&_.resize-handle-sw]:bottom-0 [&_.resize-handle-sw]:left-0 [&_.resize-handle-sw]:cursor-sw-resize
-              [&_.resize-handle-se]:bottom-0 [&_.resize-handle-se]:right-0 [&_.resize-handle-se]:cursor-se-resize"
+              [&_.resizable-image]:relative [&_.resizable-image]:inline-block [&_.resizable-image]:max-w-full"
           />
           {!editor?.getText() && (
             <div className="absolute top-4 left-4 text-slate-400 pointer-events-none">
