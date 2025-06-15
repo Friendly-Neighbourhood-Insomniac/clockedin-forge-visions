@@ -65,6 +65,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
           'data-math': true,
           'data-expression': '',
           class: 'math-expression bg-gray-50 p-4 rounded border text-center my-4',
+          style: 'min-height: 60px; display: flex; align-items: center; justify-content: center;',
           ...this.options.HTMLAttributes,
         },
         'Empty equation'
@@ -74,7 +75,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
     let renderedMath = '';
     
     try {
-      // Render the LaTeX expression using KaTeX
+      // Render the LaTeX expression using KaTeX with display mode
       renderedMath = katex.renderToString(expression, {
         displayMode: true,
         throwOnError: false,
@@ -99,6 +100,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
         'data-math': true,
         'data-expression': expression,
         class: 'math-expression bg-gray-50 p-4 rounded border text-center my-4',
+        style: 'min-height: 60px; display: flex; align-items: center; justify-content: center; page-break-inside: avoid;',
         contenteditable: 'false',
         ...this.options.HTMLAttributes,
       },
@@ -106,6 +108,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
         'div',
         {
           class: 'katex-container',
+          style: 'display: inline-block; max-width: 100%; overflow-x: auto;',
           innerHTML: renderedMath
         }
       ]
@@ -129,6 +132,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
     return ({ node, HTMLAttributes }) => {
       const dom = document.createElement('div');
       dom.className = 'math-expression bg-gray-50 p-4 rounded border text-center my-4';
+      dom.style.cssText = 'min-height: 60px; display: flex; align-items: center; justify-content: center; page-break-inside: avoid;';
       dom.setAttribute('data-math', 'true');
       dom.setAttribute('data-expression', node.attrs.expression || '');
       dom.contentEditable = 'false';
@@ -151,6 +155,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
         
         const container = document.createElement('div');
         container.className = 'katex-container';
+        container.style.cssText = 'display: inline-block; max-width: 100%; overflow-x: auto;';
         container.innerHTML = rendered;
         dom.appendChild(container);
       } catch (error) {

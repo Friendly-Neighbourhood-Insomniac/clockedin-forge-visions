@@ -3,6 +3,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import katex from 'katex';
 
 declare global {
   interface Window {
@@ -39,6 +40,51 @@ const TurnJsFlipbook: React.FC<TurnJsFlipbookProps> = ({
   const [totalPages, setTotalPages] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
   const [turnInstance, setTurnInstance] = useState<any>(null);
+
+  // Function to process content and render math equations
+  const processContentWithMath = (content: string): string => {
+    if (!content) return '';
+    
+    // Create a temporary div to parse the content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    
+    // Find all math expressions and re-render them
+    const mathElements = tempDiv.querySelectorAll('[data-math]');
+    mathElements.forEach((element) => {
+      const expression = element.getAttribute('data-expression');
+      if (expression && expression.trim()) {
+        try {
+          const rendered = katex.renderToString(expression, {
+            displayMode: true,
+            throwOnError: false,
+            errorColor: '#cc0000',
+            strict: 'warn',
+            trust: true
+          });
+          
+          const newElement = document.createElement('div');
+          newElement.className = 'math-expression bg-gray-50 p-4 rounded border text-center my-4';
+          newElement.style.cssText = 'min-height: 60px; display: flex; align-items: center; justify-content: center; page-break-inside: avoid;';
+          newElement.setAttribute('data-math', 'true');
+          newElement.setAttribute('data-expression', expression);
+          
+          const container = document.createElement('div');
+          container.className = 'katex-container';
+          container.style.cssText = 'display: inline-block; max-width: 100%; overflow-x: auto;';
+          container.innerHTML = rendered;
+          newElement.appendChild(container);
+          
+          element.parentNode?.replaceChild(newElement, element);
+        } catch (error) {
+          console.error('Error rendering math in flipbook:', error);
+          element.innerHTML = `<span style="color: #cc0000; font-family: monospace;">Error: ${expression}</span>`;
+        }
+      }
+    });
+    
+    return tempDiv.innerHTML;
+  };
 
   useEffect(() => {
     const loadTurnJs = async () => {
@@ -241,13 +287,15 @@ const TurnJsFlipbook: React.FC<TurnJsFlipbookProps> = ({
                 {/* Chapter Pages */}
                 {bookData.chapters.map((chapter, index) => (
                   <div key={chapter.id} className="page">
-                    <div className="h-full bg-white p-8 shadow-lg relative">
+                    <div className="h-full bg-white p-8 shadow-lg relative overflow-hidden">
                       <h2 className="text-2xl font-bold mb-6 text-slate-800 border-b-2 border-cyan-500 pb-2">
                         {chapter.title}
                       </h2>
                       <div 
                         className="text-slate-700 leading-relaxed overflow-hidden"
-                        dangerouslySetInnerHTML={{ __html: chapter.content || '<p className="text-slate-500 italic">No content yet...</p>' }}
+                        dangerouslySetInnerHTML={{ 
+                          __html: processContentWithMath(chapter.content) || '<p className="text-slate-500 italic">No content yet...</p>' 
+                        }}
                       />
                       <div className="absolute bottom-4 right-4 text-sm text-slate-400">
                         Page {index + 2}

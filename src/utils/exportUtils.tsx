@@ -1,6 +1,7 @@
 
 import { pdf, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 import { convertEmbedsToQRCodes } from './qrCodeGenerator';
+import katex from 'katex';
 
 // Register fonts for PDF
 Font.register({
@@ -20,6 +21,68 @@ interface BookData {
   description: string;
   chapters: Chapter[];
 }
+
+// Function to process content and convert math to readable text for PDF
+const processMathForPDF = (content: string): string => {
+  if (!content) return '';
+  
+  // Create a temporary div to parse the content
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = content;
+  
+  // Find all math expressions and convert them to text
+  const mathElements = tempDiv.querySelectorAll('[data-math]');
+  mathElements.forEach((element) => {
+    const expression = element.getAttribute('data-expression');
+    if (expression && expression.trim()) {
+      // Replace math element with formatted text
+      const textElement = document.createElement('div');
+      textElement.className = 'math-equation';
+      textElement.style.cssText = 'margin: 16px 0; padding: 12px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; font-family: monospace; text-align: center;';
+      textElement.textContent = `[EQUATION: ${expression}]`;
+      element.parentNode?.replaceChild(textElement, element);
+    }
+  });
+  
+  return tempDiv.innerHTML;
+};
+
+// Function to process content and render math for HTML/EPUB
+const processMathForHTML = (content: string): string => {
+  if (!content) return '';
+  
+  // Create a temporary div to parse the content
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = content;
+  
+  // Find all math expressions and re-render them
+  const mathElements = tempDiv.querySelectorAll('[data-math]');
+  mathElements.forEach((element) => {
+    const expression = element.getAttribute('data-expression');
+    if (expression && expression.trim()) {
+      try {
+        const rendered = katex.renderToString(expression, {
+          displayMode: true,
+          throwOnError: false,
+          errorColor: '#cc0000',
+          strict: 'warn',
+          trust: true
+        });
+        
+        const newElement = document.createElement('div');
+        newElement.className = 'math-expression';
+        newElement.style.cssText = 'margin: 16px 0; padding: 12px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; text-align: center; page-break-inside: avoid;';
+        newElement.innerHTML = rendered;
+        element.parentNode?.replaceChild(newElement, element);
+      } catch (error) {
+        console.error('Error rendering math for export:', error);
+        element.innerHTML = `<div style="color: #cc0000; font-family: monospace; text-align: center; padding: 12px;">Error rendering equation: ${expression}</div>`;
+      }
+    }
+  });
+  
+  return tempDiv.innerHTML;
+};
 
 // PDF Styles
 const styles = StyleSheet.create({
@@ -94,7 +157,7 @@ const PDFDocument: React.FC<{ bookData: BookData }> = ({ bookData }) => (
         <View>
           <Text style={styles.chapterTitle}>{chapter.title}</Text>
           <Text style={styles.chapterContent}>
-            {chapter.content ? chapter.content.replace(/<[^>]*>/g, '') : 'No content available'}
+            {chapter.content ? processMathForPDF(chapter.content).replace(/<[^>]*>/g, '') : 'No content available'}
           </Text>
         </View>
         <Text style={styles.pageNumber}>{index + 2}</Text>
@@ -110,16 +173,16 @@ export const exportToPDF = async (bookData: BookData): Promise<Blob> => {
 
 export const exportToEPUB = async (bookData: BookData): Promise<Blob> => {
   try {
-    // Convert embeds to QR codes for EPUB
+    // Convert embeds to QR codes and process math for EPUB
     const processedChapters = await Promise.all(
       bookData.chapters.map(async (chapter) => ({
         ...chapter,
-        content: await convertEmbedsToQRCodes(chapter.content || '')
+        content: processMathForHTML(await convertEmbedsToQRCodes(chapter.content || ''))
       }))
     );
 
     // Fallback to HTML export since epub-gen has browser compatibility issues
-    return exportToHTML(bookData);
+    return exportToHTML({ ...bookData, chapters: processedChapters });
   } catch (error) {
     console.error('Error creating EPUB:', error);
     // Fallback to HTML export
@@ -133,6 +196,7 @@ const createSimpleEPUB = (bookData: BookData, chapters: Chapter[]): string => {
 <head>
   <meta charset="UTF-8">
   <title>${bookData.title}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
   <style>
     body { font-family: Georgia, serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
     .cover { text-align: center; page-break-after: always; }
@@ -141,6 +205,16 @@ const createSimpleEPUB = (bookData: BookData, chapters: Chapter[]): string => {
     .cover .description { font-style: italic; color: #888; }
     .chapter { page-break-before: always; }
     .chapter h2 { border-bottom: 2px solid #06b6d4; padding-bottom: 10px; }
+    .math-expression { 
+      margin: 16px 0; 
+      padding: 12px; 
+      background-color: #f8f9fa; 
+      border: 1px solid #e9ecef; 
+      border-radius: 4px; 
+      text-align: center; 
+      page-break-inside: avoid;
+    }
+    .katex-display { margin: 0; }
   </style>
 </head>
 <body>
@@ -164,7 +238,7 @@ export const exportToHTML = async (bookData: BookData): Promise<Blob> => {
   const processedChapters = await Promise.all(
     bookData.chapters.map(async (chapter) => ({
       ...chapter,
-      content: await convertEmbedsToQRCodes(chapter.content || '')
+      content: processMathForHTML(await convertEmbedsToQRCodes(chapter.content || ''))
     }))
   );
 
