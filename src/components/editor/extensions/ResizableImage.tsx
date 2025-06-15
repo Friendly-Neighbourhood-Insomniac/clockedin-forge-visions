@@ -1,6 +1,7 @@
 
+import React from 'react';
 import { Node, nodeInputRule } from '@tiptap/core';
-import { NodeViewRenderer } from '@tiptap/react';
+import { NodeViewRenderer, NodeViewProps } from '@tiptap/react';
 
 export interface ResizableImageOptions {
   inline: boolean;
@@ -18,8 +19,8 @@ declare module '@tiptap/core' {
 
 const inputRegex = /(?:^|\s)(!\[(.+|:?)]\((\S+)(?:(?:\s+)["'](\S+)["'])?\))$/;
 
-// Create the NodeView component
-const ResizableImageNodeView = ({ node, updateAttributes, selected }: any) => {
+// NodeView component for resizable images
+const ResizableImageNodeView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }) => {
   const { src, alt, title, width, height } = node.attrs;
   
   const handleMouseDown = (e: React.MouseEvent, direction: string) => {
