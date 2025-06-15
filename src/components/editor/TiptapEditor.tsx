@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Youtube from '@tiptap/extension-youtube';
@@ -47,6 +47,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     show: false,
     position: { top: 0, left: 0 }
   });
+  const isUpdatingFromStore = useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -100,8 +101,10 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     content: content || '',
     editable: !readOnly,
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      setContent(html);
+      if (!isUpdatingFromStore.current) {
+        const html = editor.getHTML();
+        setContent(html);
+      }
     },
     onSelectionUpdate: ({ editor }) => {
       const { from, to } = editor.state.selection;
@@ -131,18 +134,18 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
       onBlur?.();
     },
     onCreate: ({ editor }) => {
-      console.log('Editor created successfully with enhanced features');
+      console.log('TiptapEditor initialized successfully');
     },
   });
 
-  // Auto-save functionality
+  // Auto-save functionality - only save when content actually changes
   const { saveStatus } = useAutoSave({
     content: content || '',
     onSave: (savedContent) => {
-      // This will be handled by the parent component through the store
-      console.log('Auto-saving content...');
+      // Auto-save is handled by the parent component through onBlur
+      console.log('Content auto-saved');
     },
-    delay: 1000
+    delay: 2000 // Increased delay to reduce frequency
   });
 
   // Keyboard shortcuts
@@ -155,9 +158,14 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     };
   }, [editor, setEditor]);
 
+  // Update editor content when store content changes (but not from our own updates)
   useEffect(() => {
     if (editor && content && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
+      isUpdatingFromStore.current = true;
+      editor.commands.setContent(content, false);
+      setTimeout(() => {
+        isUpdatingFromStore.current = false;
+      }, 100);
     }
   }, [content, editor]);
 
@@ -192,7 +200,6 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
                 [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-gray-300 [&_.ProseMirror_th]:p-2 [&_.ProseMirror_th]:bg-gray-100
                 [&_.task-list]:list-none [&_.task-item]:flex [&_.task-item]:items-start
                 [&_.math-expression]:bg-gray-50 [&_.math-expression]:p-4 [&_.math-expression]:rounded [&_.math-expression]:my-4 [&_.math-expression]:border
-                [&_.katex-display]:margin-0 [&_.katex]:font-size-1 [&_.katex]:color-inherit
                 [&_.resizable-image]:relative [&_.resizable-image]:inline-block [&_.resizable-image]:max-w-full
                 sm:text-sm md:text-base lg:text-lg
                 touch-manipulation"
