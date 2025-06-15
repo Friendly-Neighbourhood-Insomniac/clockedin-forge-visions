@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Button } from '@/components/ui/button';
@@ -68,12 +67,7 @@ const TurnJsFlipbook: React.FC<TurnJsFlipbookProps> = ({
           newElement.style.cssText = 'min-height: 60px; display: flex; align-items: center; justify-content: center; page-break-inside: avoid;';
           newElement.setAttribute('data-math', 'true');
           newElement.setAttribute('data-expression', expression);
-          
-          const container = document.createElement('div');
-          container.className = 'katex-container';
-          container.style.cssText = 'display: inline-block; max-width: 100%; overflow-x: auto;';
-          container.innerHTML = rendered;
-          newElement.appendChild(container);
+          newElement.innerHTML = rendered;
           
           element.parentNode?.replaceChild(newElement, element);
         } catch (error) {
@@ -83,7 +77,24 @@ const TurnJsFlipbook: React.FC<TurnJsFlipbookProps> = ({
       }
     });
     
-    return tempDiv.innerHTML;
+    // Also handle inline math expressions that might be wrapped in \( \) delimiters
+    let processedContent = tempDiv.innerHTML;
+    processedContent = processedContent.replace(/\\\((.*?)\\\)/g, (match, expression) => {
+      try {
+        return katex.renderToString(expression, {
+          displayMode: false,
+          throwOnError: false,
+          errorColor: '#cc0000',
+          strict: 'warn',
+          trust: true
+        });
+      } catch (error) {
+        console.error('Error rendering inline math:', error);
+        return `<span style="color: #cc0000; font-family: monospace;">Error: ${expression}</span>`;
+      }
+    });
+    
+    return processedContent;
   };
 
   useEffect(() => {

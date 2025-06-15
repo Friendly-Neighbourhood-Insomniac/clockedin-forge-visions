@@ -26,6 +26,7 @@ import FloatingToolbar from './FloatingToolbar';
 import SaveStatusIndicator from './SaveStatusIndicator';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import katex from 'katex';
 
 const lowlight = createLowlight(common);
 
@@ -48,6 +49,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     position: { top: 0, left: 0 }
   });
   const isUpdatingFromStore = useRef(false);
+  const lastContentRef = useRef<string>('');
 
   const editor = useEditor({
     extensions: [
@@ -98,12 +100,13 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
         },
       }),
     ],
-    content: content || '',
+    content: '',
     editable: !readOnly,
     onUpdate: ({ editor }) => {
       if (!isUpdatingFromStore.current) {
         const html = editor.getHTML();
         setContent(html);
+        lastContentRef.current = html;
       }
     },
     onSelectionUpdate: ({ editor }) => {
@@ -135,17 +138,53 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     },
     onCreate: ({ editor }) => {
       console.log('TiptapEditor initialized successfully');
+      // Render any existing math equations
+      renderMathEquations();
+    },
+    onTransaction: () => {
+      // Re-render math equations after any content change
+      setTimeout(() => renderMathEquations(), 100);
     },
   });
 
-  // Auto-save functionality - only save when content actually changes
+  // Function to render math equations using KaTeX
+  const renderMathEquations = useCallback(() => {
+    if (!editor) return;
+    
+    const editorElement = editor.view.dom;
+    const mathElements = editorElement.querySelectorAll('[data-math="true"]');
+    
+    mathElements.forEach((element) => {
+      const expression = element.getAttribute('data-expression');
+      if (expression && expression.trim()) {
+        try {
+          const rendered = katex.renderToString(expression, {
+            displayMode: true,
+            throwOnError: false,
+            errorColor: '#cc0000',
+            strict: 'warn',
+            trust: true
+          });
+          
+          // Only update if the content has changed
+          if (element.innerHTML !== rendered) {
+            element.innerHTML = rendered;
+          }
+        } catch (error) {
+          console.error('Error rendering math equation:', error);
+          element.innerHTML = `<span style="color: #cc0000; font-family: monospace;">Error: ${expression}</span>`;
+        }
+      }
+    });
+  }, [editor]);
+
+  // Auto-save functionality
   const { saveStatus } = useAutoSave({
     content: content || '',
     onSave: (savedContent) => {
-      // Auto-save is handled by the parent component through onBlur
       console.log('Content auto-saved');
     },
-    delay: 2000 // Increased delay to reduce frequency
+    delay: 2000
   });
 
   // Keyboard shortcuts
@@ -158,16 +197,26 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     };
   }, [editor, setEditor]);
 
-  // Update editor content when store content changes (but not from our own updates)
+  // Update editor content when store content changes
   useEffect(() => {
-    if (editor && content && content !== editor.getHTML()) {
+    if (editor && content !== lastContentRef.current) {
       isUpdatingFromStore.current = true;
-      editor.commands.setContent(content, false);
+      
+      // Clear editor if content is empty or null
+      if (!content || content.trim() === '') {
+        editor.commands.clearContent();
+      } else {
+        editor.commands.setContent(content, false);
+      }
+      
+      lastContentRef.current = content || '';
+      
       setTimeout(() => {
         isUpdatingFromStore.current = false;
+        renderMathEquations();
       }, 100);
     }
-  }, [content, editor]);
+  }, [content, editor, renderMathEquations]);
 
   const focusEditor = useCallback(() => {
     if (editor) {

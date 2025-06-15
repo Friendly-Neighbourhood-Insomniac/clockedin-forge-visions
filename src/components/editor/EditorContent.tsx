@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { FileText } from 'lucide-react';
 import TiptapEditor from '@/components/editor/TiptapEditor';
 import EnhancedToolbar from '@/components/editor/EnhancedToolbar';
+import { useEditorStore } from '@/stores/editorStore';
 
 interface Chapter {
   id: string;
@@ -23,6 +24,18 @@ const EditorContent: React.FC<EditorContentProps> = ({
   onChapterTitleChange,
   onContentSave
 }) => {
+  const { setContent } = useEditorStore();
+
+  // Clear editor content when chapter changes or no chapter is selected
+  useEffect(() => {
+    if (!selectedChapter) {
+      setContent('');
+    } else {
+      // Load the chapter content, or empty string for new chapters
+      setContent(selectedChapter.content || '');
+    }
+  }, [selectedChapter?.id, setContent]);
+
   if (!selectedChapter) {
     return (
       <Card className="bg-slate-800/50 border-cyan-400/30">
