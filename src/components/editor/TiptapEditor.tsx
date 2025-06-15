@@ -84,7 +84,11 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
         lowlight,
         defaultLanguage: 'javascript',
       }),
-      Mathematics,
+      Mathematics.configure({
+        HTMLAttributes: {
+          class: 'math-expression bg-gray-50 p-4 rounded border text-center my-4',
+        },
+      }),
     ],
     content: content || '',
     editable: !readOnly,
@@ -97,6 +101,9 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     },
     onBlur: () => {
       onBlur?.();
+    },
+    onCreate: ({ editor }) => {
+      console.log('Editor created successfully with Mathematics extension');
     },
   });
 
@@ -135,7 +142,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
               [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-gray-300 [&_.ProseMirror_th]:p-2 [&_.ProseMirror_th]:bg-gray-100
               [&_.task-list]:list-none [&_.task-item]:flex [&_.task-item]:items-start
               [&_.math-expression]:bg-gray-50 [&_.math-expression]:p-4 [&_.math-expression]:rounded [&_.math-expression]:my-4 [&_.math-expression]:border
-              [&_.katex-display]:margin-0
+              [&_.katex-display]:margin-0 [&_.katex]:font-size-1 [&_.katex]:color-inherit
               [&_.resizable-image-wrapper]:relative [&_.resizable-image-wrapper]:inline-block
               [&_.resize-handles]:absolute [&_.resize-handles]:inset-0 [&_.resize-handles]:pointer-events-none
               [&_.resize-handle]:absolute [&_.resize-handle]:w-2 [&_.resize-handle]:h-2 [&_.resize-handle]:bg-blue-500 [&_.resize-handle]:pointer-events-auto

@@ -55,9 +55,12 @@ const EnhancedToolbar: React.FC = () => {
 
   const insertMathEquation = () => {
     if (mathExpression.trim()) {
+      console.log('Inserting math equation:', mathExpression);
       editor.commands.insertMath(mathExpression);
       setMathExpression('');
       setShowMathDialog(false);
+      // Force editor to update
+      editor.commands.focus();
     }
   };
 
@@ -320,17 +323,28 @@ const EnhancedToolbar: React.FC = () => {
                     onChange={(e) => setMathExpression(e.target.value)}
                     placeholder="Enter LaTeX expression (e.g., x^2 + y^2 = z^2)"
                     className="bg-slate-700 border-slate-600 text-slate-200"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        insertMathEquation();
+                      }
+                    }}
                   />
                   <div className="text-xs text-slate-400 space-y-1">
                     <div><strong>Examples:</strong></div>
-                    <div>• Quadratic formula: {'x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}'}</div>
-                    <div>• Integral: {'\\int_0^1 x^2 dx'}</div>
-                    <div>• Summation: {'\\sum_{i=1}^n x_i'}</div>
-                    <div>• Matrix: {'\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}'}</div>
+                    <div>• Quadratic formula: x = \\frac{`{-b \\pm \\sqrt{b^2-4ac}}`}{`{2a}`}</div>
+                    <div>• Integral: \\int_0^1 x^2 dx</div>
+                    <div>• Summation: \\sum_{`{i=1}`}^n x_i</div>
+                    <div>• Matrix: \\begin{`{pmatrix}`} a & b \\\\ c & d \\end{`{pmatrix}`}</div>
                   </div>
-                  <Button onClick={insertMathEquation} className="bg-cyan-600 hover:bg-cyan-700">
-                    Insert Equation
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button onClick={insertMathEquation} className="bg-cyan-600 hover:bg-cyan-700 flex-1">
+                      Insert Equation
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowMathDialog(false)} className="border-slate-600">
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
