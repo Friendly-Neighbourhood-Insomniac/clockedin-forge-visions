@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Node, nodeInputRule } from '@tiptap/core';
-import { NodeViewRenderer, NodeViewProps } from '@tiptap/react';
+import { ReactNodeViewRenderer, NodeViewProps } from '@tiptap/react';
 
 export interface ResizableImageOptions {
   inline: boolean;
@@ -208,6 +208,6 @@ export const ResizableImage = Node.create<ResizableImageOptions>({
   },
 
   addNodeView() {
-    return NodeViewRenderer(ResizableImageNodeView);
+    return ReactNodeViewRenderer(ResizableImageNodeView);
   },
 });
