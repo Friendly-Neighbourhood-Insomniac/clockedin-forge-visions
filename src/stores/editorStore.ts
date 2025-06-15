@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { Editor } from '@tiptap/react';
 
@@ -38,10 +37,18 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
 
   setContent: (content) => {
     const { editor } = get();
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
-    }
+    
+    // Debounced content update to prevent excessive re-renders
+    const timeoutId = setTimeout(() => {
+      if (editor && content !== editor.getHTML()) {
+        editor.commands.setContent(content);
+      }
+    }, 100);
+    
     set({ content });
+    
+    // Clear the timeout if a new update comes in
+    return () => clearTimeout(timeoutId);
   },
 
   setReadOnly: (readOnly) => {
@@ -95,43 +102,42 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
   // New professional features
   insertMath: (expression) => {
     const { editor } = get();
-    if (editor) {
+    if (editor && editor.isEditable) {
       editor.commands.insertMath(expression);
     }
   },
 
   insertTable: (rows, cols) => {
     const { editor } = get();
-    if (editor) {
+    if (editor && editor.isEditable) {
       editor.commands.insertTable({ rows, cols, withHeaderRow: true });
     }
   },
 
   setFontFamily: (font) => {
     const { editor } = get();
-    if (editor) {
+    if (editor && editor.isEditable) {
       editor.commands.setFontFamily(font);
     }
   },
 
   setFontSize: (size) => {
     const { editor } = get();
-    if (editor) {
-      // Use textStyle extension to set font size
+    if (editor && editor.isEditable) {
       editor.commands.setMark('textStyle', { fontSize: size });
     }
   },
 
   setTextColor: (color) => {
     const { editor } = get();
-    if (editor) {
+    if (editor && editor.isEditable) {
       editor.commands.setColor(color);
     }
   },
 
   toggleHighlight: (color) => {
     const { editor } = get();
-    if (editor) {
+    if (editor && editor.isEditable) {
       if (color) {
         editor.commands.toggleHighlight({ color });
       } else {

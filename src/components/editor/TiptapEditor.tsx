@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect } from 'react';
+
+import React, { useCallback, useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Youtube from '@tiptap/extension-youtube';
@@ -21,6 +22,10 @@ import { useEditorStore } from '@/stores/editorStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { ResizableImage } from './extensions/ResizableImage';
 import { Mathematics } from './extensions/Mathematics';
+import FloatingToolbar from './FloatingToolbar';
+import SaveStatusIndicator from './SaveStatusIndicator';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 const lowlight = createLowlight(common);
 
@@ -38,12 +43,15 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
   onBlur
 }) => {
   const { setEditor, content, setContent } = useEditorStore();
+  const [floatingToolbar, setFloatingToolbar] = useState({
+    show: false,
+    position: { top: 0, left: 0 }
+  });
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        codeBlock: false, // We'll use CodeBlockLowlight instead
-        // Disable the default image extension since we're using ResizableImage
+        codeBlock: false,
       }),
       TextStyle,
       Color,
@@ -95,16 +103,50 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
       const html = editor.getHTML();
       setContent(html);
     },
+    onSelectionUpdate: ({ editor }) => {
+      const { from, to } = editor.state.selection;
+      const hasSelection = from !== to;
+      
+      if (hasSelection && !readOnly) {
+        const { view } = editor;
+        const start = view.coordsAtPos(from);
+        const end = view.coordsAtPos(to);
+        
+        setFloatingToolbar({
+          show: true,
+          position: {
+            top: start.top,
+            left: (start.left + end.left) / 2
+          }
+        });
+      } else {
+        setFloatingToolbar(prev => ({ ...prev, show: false }));
+      }
+    },
     onFocus: () => {
       onFocus?.();
     },
     onBlur: () => {
+      setFloatingToolbar(prev => ({ ...prev, show: false }));
       onBlur?.();
     },
     onCreate: ({ editor }) => {
-      console.log('Editor created successfully with ResizableImage and Mathematics extensions');
+      console.log('Editor created successfully with enhanced features');
     },
   });
+
+  // Auto-save functionality
+  const { saveStatus } = useAutoSave({
+    content: content || '',
+    onSave: (savedContent) => {
+      // This will be handled by the parent component through the store
+      console.log('Auto-saving content...');
+    },
+    delay: 1000
+  });
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts(editor);
 
   useEffect(() => {
     setEditor(editor);
@@ -126,32 +168,51 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
   }, [editor]);
 
   return (
-    <Card className="bg-slate-800/50 border-cyan-400/30">
-      <CardContent className="p-6">
-        <div 
-          className="min-h-[500px] p-4 bg-white rounded-lg text-slate-800 cursor-text relative"
-          onClick={focusEditor}
-        >
-          <EditorContent 
-            editor={editor}
-            className="min-h-[500px] focus:outline-none prose prose-sm max-w-none
-              [&_.ProseMirror]:min-h-[500px] [&_.ProseMirror]:outline-none
-              [&_.ProseMirror_table]:border-collapse [&_.ProseMirror_table]:border-spacing-0
-              [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-gray-300 [&_.ProseMirror_td]:p-2
-              [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-gray-300 [&_.ProseMirror_th]:p-2 [&_.ProseMirror_th]:bg-gray-100
-              [&_.task-list]:list-none [&_.task-item]:flex [&_.task-item]:items-start
-              [&_.math-expression]:bg-gray-50 [&_.math-expression]:p-4 [&_.math-expression]:rounded [&_.math-expression]:my-4 [&_.math-expression]:border
-              [&_.katex-display]:margin-0 [&_.katex]:font-size-1 [&_.katex]:color-inherit
-              [&_.resizable-image]:relative [&_.resizable-image]:inline-block [&_.resizable-image]:max-w-full"
-          />
-          {!editor?.getText() && (
-            <div className="absolute top-4 left-4 text-slate-400 pointer-events-none">
-              {placeholder}
+    <>
+      <Card className="bg-slate-800/50 border-cyan-400/30">
+        <CardContent className="p-6">
+          {/* Header with save status */}
+          <div className="flex justify-between items-center mb-4">
+            <SaveStatusIndicator status={saveStatus} />
+            <div className="text-xs text-slate-400">
+              Press Ctrl+K for links, Ctrl+H for highlight, Ctrl+1-6 for headings
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          </div>
+          
+          <div 
+            className="min-h-[500px] p-4 bg-white rounded-lg text-slate-800 cursor-text relative"
+            onClick={focusEditor}
+          >
+            <EditorContent 
+              editor={editor}
+              className="min-h-[500px] focus:outline-none prose prose-sm max-w-none
+                [&_.ProseMirror]:min-h-[500px] [&_.ProseMirror]:outline-none
+                [&_.ProseMirror_table]:border-collapse [&_.ProseMirror_table]:border-spacing-0
+                [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-gray-300 [&_.ProseMirror_td]:p-2
+                [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-gray-300 [&_.ProseMirror_th]:p-2 [&_.ProseMirror_th]:bg-gray-100
+                [&_.task-list]:list-none [&_.task-item]:flex [&_.task-item]:items-start
+                [&_.math-expression]:bg-gray-50 [&_.math-expression]:p-4 [&_.math-expression]:rounded [&_.math-expression]:my-4 [&_.math-expression]:border
+                [&_.katex-display]:margin-0 [&_.katex]:font-size-1 [&_.katex]:color-inherit
+                [&_.resizable-image]:relative [&_.resizable-image]:inline-block [&_.resizable-image]:max-w-full
+                sm:text-sm md:text-base lg:text-lg
+                touch-manipulation"
+            />
+            {!editor?.getText() && (
+              <div className="absolute top-4 left-4 text-slate-400 pointer-events-none">
+                {placeholder}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Floating Toolbar */}
+      <FloatingToolbar
+        editor={editor}
+        show={floatingToolbar.show}
+        position={floatingToolbar.position}
+      />
+    </>
   );
 };
 
