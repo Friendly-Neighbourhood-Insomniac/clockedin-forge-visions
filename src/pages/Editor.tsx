@@ -1,16 +1,14 @@
+
 import React, { useEffect, useState } from 'react';
 import { useChapterTreeStore } from '@/stores/chapterTreeStore';
 import { useBookMetadataStore } from '@/stores/bookMetadataStore';
 import { useEditorStore } from '@/stores/editorStore';
-import TiptapEditor from '@/components/editor/TiptapEditor';
-import EnhancedToolbar from '@/components/editor/EnhancedToolbar';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Plus, FileText, Eye, Download, Loader2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { exportToPDF, exportToEPUB, exportToHTML, downloadFile } from '@/utils/exportUtils';
 import { useToast } from '@/hooks/use-toast';
+import BookMetadataHeader from '@/components/editor/BookMetadataHeader';
+import ChapterSidebar from '@/components/editor/ChapterSidebar';
+import ExportControls from '@/components/editor/ExportControls';
+import EditorContent from '@/components/editor/EditorContent';
 
 const Editor: React.FC = () => {
   const {
@@ -128,177 +126,38 @@ const Editor: React.FC = () => {
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex-1">
-              <Input
-                value={metadata.title}
-                onChange={(e) => updateMetadata('title', e.target.value)}
-                placeholder="Book Title"
-                className="text-2xl font-bold bg-transparent border-none text-cyan-100 placeholder-slate-400 p-0 h-auto focus:ring-0 mb-2"
-              />
-              <Input
-                value={metadata.author}
-                onChange={(e) => updateMetadata('author', e.target.value)}
-                placeholder="Author Name"
-                className="text-lg bg-transparent border-none text-slate-300 placeholder-slate-500 p-0 h-auto focus:ring-0"
-              />
-            </div>
-            <div className="flex items-center gap-2 ml-4">
-              <Link to="/preview">
-                <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-white">
-                  <Eye className="w-4 h-4 mr-2" />
-                  Preview
-                </Button>
-              </Link>
-              
-              {/* Export Buttons */}
-              <Button
-                size="sm"
-                onClick={() => handleExport('pdf')}
-                disabled={isExporting !== null}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                {isExporting === 'pdf' ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4 mr-2" />
-                )}
-                PDF
-              </Button>
-              
-              <Button
-                size="sm"
-                onClick={() => handleExport('epub')}
-                disabled={isExporting !== null}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {isExporting === 'epub' ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4 mr-2" />
-                )}
-                EPUB
-              </Button>
-              
-              <Button
-                size="sm"
-                onClick={() => handleExport('html')}
-                disabled={isExporting !== null}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {isExporting === 'html' ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4 mr-2" />
-                )}
-                HTML
-              </Button>
-
-              <Link to="/export">
-                <Button size="sm" variant="outline" className="border-cyan-400/30 text-slate-300 hover:text-white hover:bg-slate-700">
-                  <Download className="w-4 h-4 mr-2" />
-                  More Options
-                </Button>
-              </Link>
-            </div>
+            <BookMetadataHeader
+              title={metadata.title}
+              author={metadata.author}
+              onTitleChange={(title) => updateMetadata('title', title)}
+              onAuthorChange={(author) => updateMetadata('author', author)}
+            />
+            <ExportControls
+              isExporting={isExporting}
+              onExport={handleExport}
+            />
           </div>
         </div>
 
         <div className="grid lg:grid-cols-4 gap-6">
           {/* Chapter Sidebar */}
           <div className="lg:col-span-1">
-            <Card className="bg-slate-800/50 border-cyan-400/30">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <h3 className="text-lg font-semibold text-cyan-100">Chapters</h3>
-                <Button
-                  size="sm"
-                  onClick={handleAddChapter}
-                  className="bg-cyan-600 hover:bg-cyan-700"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {chapters.length === 0 ? (
-                  <div className="text-center text-slate-400 py-8">
-                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No chapters yet</p>
-                    <p className="text-sm">Click + to add your first chapter</p>
-                  </div>
-                ) : (
-                  chapters.map((chapter) => (
-                    <div
-                      key={chapter.id}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedChapterId === chapter.id
-                          ? 'bg-cyan-600/20 border border-cyan-400/50'
-                          : 'bg-slate-700/50 hover:bg-slate-700'
-                      }`}
-                      onClick={() => selectChapter(chapter.id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-200 truncate">{chapter.title}</span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm('Delete this chapter?')) {
-                              deleteChapter(chapter.id);
-                            }
-                          }}
-                          className="text-red-400 hover:text-red-300 h-6 w-6 p-0"
-                        >
-                          ×
-                        </Button>
-                      </div>
-                      {chapter.wordCount && (
-                        <div className="text-xs text-slate-400 mt-1">
-                          {chapter.wordCount} words
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
+            <ChapterSidebar
+              chapters={chapters}
+              selectedChapterId={selectedChapterId}
+              onSelectChapter={selectChapter}
+              onAddChapter={handleAddChapter}
+              onDeleteChapter={deleteChapter}
+            />
           </div>
 
           {/* Editor Area */}
           <div className="lg:col-span-3">
-            {selectedChapter ? (
-              <div className="space-y-4">
-                {/* Chapter Title */}
-                <Card className="bg-slate-800/50 border-cyan-400/30">
-                  <CardContent className="p-4">
-                    <Input
-                      value={selectedChapter.title}
-                      onChange={(e) => handleChapterTitleChange(e.target.value)}
-                      placeholder="Chapter Title"
-                      className="text-xl font-bold bg-transparent border-none text-cyan-100 placeholder-slate-400 p-0 h-auto focus:ring-0"
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Enhanced Editor Toolbar */}
-                <EnhancedToolbar />
-
-                {/* Tiptap Editor */}
-                <TiptapEditor
-                  placeholder="Start writing your chapter..."
-                  onBlur={handleContentSave}
-                />
-              </div>
-            ) : (
-              <Card className="bg-slate-800/50 border-cyan-400/30">
-                <CardContent className="flex items-center justify-center py-20">
-                  <div className="text-center text-slate-400">
-                    <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg mb-2">Select a chapter to start editing</p>
-                    <p className="text-sm">Choose from the sidebar or create a new chapter</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <EditorContent
+              selectedChapter={selectedChapter}
+              onChapterTitleChange={handleChapterTitleChange}
+              onContentSave={handleContentSave}
+            />
           </div>
         </div>
       </div>
